@@ -1,0 +1,88 @@
+@import 'tailwindcss';
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  color: #172033;
+  background: #f8fafc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+html:has(.home-scroll-container) {
+  scroll-snap-type: y proximity;
+}
+
+.home-scroll-container {
+  scroll-behavior: smooth;
+}
+
+.home-story-section {
+  opacity: 0;
+  transform: translateY(48px);
+  transition:
+    opacity 700ms ease,
+    transform 700ms ease;
+}
+
+.home-story-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.story-card {
+  display: flex;
+  min-height: 420px;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  padding: 2rem;
+  transition: transform 300ms ease;
+}
+
+.story-card:hover {
+  transform: rotate(1deg) scale(1.02);
+}
+
+::highlight(exam-highlight) {
+  background-color: #fde68a;
+  color: #172033;
+}
+
+.exam-question-dot--answered-marked {
+  color: #fff;
+  background: linear-gradient(to bottom, #22c55e 0 50%, #ef4444 50% 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-scroll-container {
+    scroll-behavior: auto;
+  }
+
+  .home-story-section {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .story-card {
+    transition: none;
+  }
+}
