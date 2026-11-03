@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ExamQuestion } from '../components/ExamQuestion'
 import { PassageViewer } from '../components/PassageViewer'
 import { useExamTimer } from '../hooks/useExamTimer'
@@ -33,10 +33,17 @@ export function ExamTakePage() {
   const [error, setError] = useState('')
   const [remainingSeconds, setRemainingSeconds] = useState(0)
   const [markedQuestions, setMarkedQuestions] = useState({})
+  const [questionPositions, setQuestionPositions] = useState({})
+  const [highlightedPassages, setHighlightedPassages] = useState({})
   const [securityWarning, setSecurityWarning] = useState(false)
+  const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(false)
   const timerDeadlineRef = useRef(null)
   const autoSubmittedRef = useRef(false)
+  const fullscreenStartedRef = useRef(false)
   const activePart = exam?.parts?.[partIndex]
+  const activePartKey = activePart?.id || activePart?.partId || String(partIndex)
+  const activeQuestionIndex = questionPositions[activePartKey] ?? 0
+  const questionRefs = useRef({})
   const { getPartTimes, partTimes } = useExamTimer(activePart?.id)
   const isMock = String(exam?.mode || '').toUpperCase() === 'MOCK'
   const durationSeconds = getDurationSeconds(exam)
@@ -99,13 +106,27 @@ export function ExamTakePage() {
   const answeredCount = Object.keys(answers).length
 
   useEffect(() => {
+    if (!activePart?.questions.length) return
+    const questionIndex = Math.min(activeQuestionIndex, activePart.questions.length - 1)
+    const questionId = activePart.questions[questionIndex]?.id
+    questionRefs.current[questionId]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [activePart, activeQuestionIndex])
+
+  useEffect(() => {
     function handleVisibilityChange() {
-      if (document.hidden) return
-      if (document.fullscreenElement === null) setSecurityWarning(true)
+      if (fullscreenStartedRef.current && (document.hidden || document.fullscreenElement === null)) {
+        setSecurityWarning(true)
+      }
     }
 
     function handleFullscreenChange() {
-      if (document.fullscreenElement === null && !document.hidden) setSecurityWarning(true)
+      if (document.fullscreenElement) {
+        fullscreenStartedRef.current = true
+        setHasEnteredFullscreen(true)
+        setSecurityWarning(false)
+      } else if (fullscreenStartedRef.current && !document.hidden) {
+        setSecurityWarning(true)
+      }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -117,8 +138,21 @@ export function ExamTakePage() {
   }, [])
 
   function enterFullscreen() {
-    document.documentElement.requestFullscreen?.().catch(() => {})
-    setSecurityWarning(false)
+    if (!document.documentElement.requestFullscreen) {
+      setSecurityWarning(true)
+      return
+    }
+
+    document.documentElement
+      .requestFullscreen()
+      .then(() => {
+        fullscreenStartedRef.current = true
+        setHasEnteredFullscreen(true)
+        setSecurityWarning(false)
+      })
+      .catch(() => {
+        setSecurityWarning(true)
+      })
   }
 
   function chooseAnswer(questionId, selectedOpt) {
@@ -127,6 +161,35 @@ export function ExamTakePage() {
 
   function toggleMark(questionId) {
     setMarkedQuestions((current) => ({ ...current, [questionId]: !current[questionId] }))
+  }
+
+  function goToQuestion(nextPartIndex, questionIndex) {
+    const part = exam.parts[nextPartIndex]
+    if (!part?.questions.length) return
+    const partKey = part.id || part.partId || String(nextPartIndex)
+    setQuestionPositions((current) => ({
+      ...current,
+      [partKey]: Math.min(questionIndex, part.questions.length - 1),
+    }))
+    setPartIndex(nextPartIndex)
+  }
+
+  function goToNextPart() {
+    if (partIndex >= exam.parts.length - 1) return
+    const nextPartIndex = partIndex + 1
+    const nextPart = exam.parts[nextPartIndex]
+    const nextPartKey = nextPart.id || nextPart.partId || String(nextPartIndex)
+    const nextQuestionIndex = questionPositions[nextPartKey] ?? 0
+    goToQuestion(nextPartIndex, nextQuestionIndex)
+  }
+
+  function goToPreviousPart() {
+    if (partIndex <= 0) return
+    const previousPartIndex = partIndex - 1
+    const previousPart = exam.parts[previousPartIndex]
+    const previousPartKey = previousPart.id || previousPart.partId || String(previousPartIndex)
+    const previousQuestionIndex = questionPositions[previousPartKey] ?? 0
+    goToQuestion(previousPartIndex, previousQuestionIndex)
   }
 
   const handleSubmit = useCallback(async () => {
@@ -177,17 +240,26 @@ export function ExamTakePage() {
 
   return (
     <div className="flex h-[calc(100vh-73px)] min-h-[620px] flex-col overflow-hidden bg-white text-slate-700">
-      <header className="flex h-11 shrink-0 items-center justify-between border-t-4 border-blue-900 border-b border-slate-200 bg-white px-4 text-xs">
-        <Link className="rounded border border-blue-300 px-4 py-1.5 font-semibold text-blue-700 hover:bg-blue-50" to={isMock ? '/thi-thu' : '/luyen-de'}>
+      <header className="grid h-11 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-t-4 border-blue-900 border-b border-slate-200 bg-white px-4 text-xs">
+        <div />
+        <div className="flex items-center gap-2">
+          <button
+            className="rounded border border-blue-300 px-4 py-1.5 font-semibold text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={partIndex === 0}
+            onClick={goToPreviousPart}
+            type="button"
+          >
           Quay lại
-        </Link>
-        <button
-          className="rounded bg-blue-500 px-4 py-1.5 font-semibold text-white hover:bg-blue-600"
-          onClick={() => setPartIndex((index) => Math.min(index + 1, exam.parts.length - 1))}
-          type="button"
-        >
-          Tiếp theo
-        </button>
+          </button>
+          <button
+            className="rounded bg-blue-500 px-4 py-1.5 font-semibold text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={partIndex >= exam.parts.length - 1}
+            onClick={goToNextPart}
+            type="button"
+          >
+            Tiếp theo
+          </button>
+        </div>
         <div className="ml-auto flex items-center gap-3">
           <span className="font-bold text-slate-700">Số câu đã trả lời: <b className="text-green-600">{answeredCount}</b> / {questionCount}</span>
           <span className={`font-mono font-bold ${isMock && remainingSeconds < 60 ? 'text-red-600' : 'text-slate-700'}`}>
@@ -199,10 +271,17 @@ export function ExamTakePage() {
           <span className="text-lg text-slate-500">⊟ ⊞ ▤</span>
         </div>
       </header>
-      <main className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-slate-300 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:divide-x lg:divide-y-0" onClick={enterFullscreen}>
+      <main className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-slate-300 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:divide-x lg:divide-y-0">
         <PassageViewer
           allowHighlight={!isMock}
-          key={activePart.id}
+          key={activePartKey}
+          onContentChange={(content) => {
+            setHighlightedPassages((current) => ({
+              ...current,
+              [activePartKey]: content,
+            }))
+          }}
+          savedContent={highlightedPassages[activePartKey]}
           text={activePart.passageText}
           title={activePart.title || activePart.passageTitle}
         />
@@ -215,42 +294,71 @@ export function ExamTakePage() {
               onAnswer={chooseAnswer}
               onToggleMark={toggleMark}
               question={question}
+              highlightedContent={highlightedPassages[question.id] || {}}
+              onContentChange={(content, contentKey) => {
+                setHighlightedPassages((current) => ({
+                  ...current,
+                  [question.id]: {
+                    ...(current[question.id] || {}),
+                    [contentKey]: content,
+                  },
+                }))
+              }}
+              questionRef={(element) => {
+                questionRefs.current[question.id] = element
+              }}
             />
           ))}
         </section>
       </main>
       <footer
-        className="grid min-h-9 shrink-0 items-center gap-1 border-t border-slate-200 bg-white px-3 py-1"
-        style={{ gridTemplateColumns: `repeat(${Math.max(questionItems.length, 1)}, minmax(0, 1fr))` }}
+        className="flex min-h-12 shrink-0 items-center gap-0 overflow-x-auto border-t border-slate-200 bg-white px-3 py-2"
       >
         {questionItems.map((question, index) => (
-          <button
-            className={`exam-question-dot h-5 w-full rounded-full px-1 text-[10px] font-semibold ${
-              markedQuestions[question.id]
-                ? answers[question.id]
-                  ? 'exam-question-dot--answered-marked'
-                  : 'bg-red-500 text-white'
-                : answers[question.id]
-                  ? 'bg-green-500 text-white'
-                  : 'bg-white text-slate-600'
-            } ${question.partIndex === partIndex ? 'ring-1 ring-blue-500' : ''}`}
-            key={question.id}
-            onClick={() => setPartIndex(question.partIndex)}
-            title={`Câu ${index + 1}`}
-            type="button"
-          >
-            {index + 1}
-          </button>
+          <span className="flex min-w-8 flex-1 justify-center" key={question.id}>
+            <button
+              className={`exam-question-dot flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border px-0 text-[11px] font-semibold transition ${
+                markedQuestions[question.id]
+                  ? 'border-orange-500 bg-orange-500 text-white'
+                  : answers[question.id]
+                    ? 'border-green-500 bg-green-500 text-white'
+                    : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200'
+              } ${question.partIndex === partIndex ? '!border-blue-500' : ''}`}
+              onClick={() => goToQuestion(
+                question.partIndex,
+                exam.parts[question.partIndex].questions.findIndex((item) => item.id === question.id),
+              )}
+              title={`Câu ${index + 1}`}
+              type="button"
+            >
+              {index + 1}
+            </button>
+          </span>
         ))}
         {error && <p className="col-span-full text-xs text-red-600">{error}</p>}
       </footer>
-      {securityWarning && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-6">
-          <div className="max-w-md rounded-xl bg-white p-6 text-center shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-900">Vui lòng quay lại chế độ làm bài</h2>
-            <p className="mt-2 text-sm text-slate-600">Không được chuyển tab hoặc thoát toàn màn hình trong khi làm bài.</p>
-            <button className="mt-5 rounded bg-blue-600 px-5 py-2 font-semibold text-white" onClick={enterFullscreen} type="button">
-              Tiếp tục làm bài
+      {(!hasEnteredFullscreen || securityWarning) && (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/75 p-6 backdrop-blur-sm"
+          role="dialog"
+        >
+          <div className="w-full max-w-md rounded-xl bg-white p-6 text-center shadow-2xl">
+            <h2 className="text-lg font-bold text-slate-900">
+              {securityWarning ? 'Vui lòng quay lại chế độ làm bài' : 'Bắt đầu làm bài'}
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              {securityWarning
+                ? 'Bạn đã thoát khỏi chế độ khóa màn hình hoặc chuyển tab. Hãy quay lại toàn màn hình để tiếp tục làm bài.'
+                : 'Bài thi yêu cầu chế độ toàn màn hình. Nhấn nút bên dưới để bắt đầu.'}
+            </p>
+            <button
+              autoFocus
+              className="mt-5 rounded bg-blue-600 px-5 py-2 font-semibold text-white transition hover:bg-blue-700"
+              onClick={enterFullscreen}
+              type="button"
+            >
+              {securityWarning ? 'Tiếp tục làm bài' : 'Bắt đầu toàn màn hình'}
             </button>
           </div>
         </div>

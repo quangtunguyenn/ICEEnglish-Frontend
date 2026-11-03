@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PageIntro } from '../components/PageIntro'
-import { getGeneralExams } from '../services/api'
+import { getApiErrorMessage, getGeneralExams, getLatestPracticeScore } from '../services/api'
 
 export function PracticePage() {
   const location = useLocation()
@@ -11,8 +11,19 @@ export function PracticePage() {
 
   useEffect(() => {
     getGeneralExams()
+      .then((items) =>
+        Promise.all(
+          items.map(async (exam) => {
+            try {
+              return { ...exam, latestScore: await getLatestPracticeScore(exam.id) }
+            } catch {
+              return { ...exam, latestScore: null }
+            }
+          }),
+        ),
+      )
       .then(setExams)
-      .catch(() => setError('Không thể tải danh sách bài thi. Vui lòng thử lại.'))
+      .catch((requestError) => setError(getApiErrorMessage(requestError, 'Không thể tải danh sách bài thi. Vui lòng thử lại.')))
       .finally(() => setLoading(false))
   }, [])
 
@@ -47,6 +58,11 @@ export function PracticePage() {
             <p className="mt-2 text-sm text-slate-500">
               {exam.durationMinutes || exam.duration || 0} phút · {exam.totalQuestions || exam.questionCount || 'Nhiều'} câu hỏi
             </p>
+            {exam.latestScore && (
+              <p className="mt-3 text-sm font-bold text-emerald-600">
+                Điểm gần nhất: {exam.latestScore.score ?? '—'}
+              </p>
+            )}
             <Link
               className="mt-6 inline-flex justify-center rounded-lg bg-cyan-500 px-4 py-3 font-bold text-slate-950 transition hover:bg-cyan-400"
               to={`/luyen-de/${exam.id}`}

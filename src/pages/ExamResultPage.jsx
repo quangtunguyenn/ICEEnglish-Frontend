@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { getApiErrorMessage, getSubmissionPartLogs } from '../services/api'
+import { formatInlineText } from '../utils/textFormatting'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -139,9 +140,12 @@ function QuestionResult({ question }) {
   return (
     <article className={`rounded-xl border bg-white p-5 shadow-sm ${isCorrect ? 'border-emerald-200' : 'border-red-200'}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="font-bold text-slate-900">
-          Câu {question.orderIndex}. {question.content}
-        </p>
+        <p
+          className="font-bold text-slate-900"
+          dangerouslySetInnerHTML={{
+            __html: `Câu ${question.orderIndex}. ${formatInlineText(question.content)}`,
+          }}
+        />
         <span className={`rounded-full px-3 py-1 text-xs font-bold ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
           {isCorrect ? 'Đúng' : 'Sai'}
         </span>
@@ -151,9 +155,12 @@ function QuestionResult({ question }) {
         <span className="text-slate-600">Đáp án đúng: <strong>{question.correctOpt || '—'}</strong></span>
       </div>
       {question.explanation && (
-        <p className="mt-4 whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-          {question.explanation}
-        </p>
+        <p
+          className="mt-4 whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm leading-6 text-slate-600"
+          dangerouslySetInnerHTML={{
+            __html: formatInlineText(question.explanation).replace(/\n/g, '<br>'),
+          }}
+        />
       )}
       {!isCorrect && video && (
         <a

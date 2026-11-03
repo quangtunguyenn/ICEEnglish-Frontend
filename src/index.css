@@ -1,8 +1,14 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', sans-serif;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   color: #172033;
   background: #f8fafc;
   font-synthesis: none;
@@ -61,15 +67,43 @@ html:has(.home-scroll-container) {
   transform: rotate(1deg) scale(1.02);
 }
 
-::highlight(exam-highlight) {
+.exam-passage-editor mark {
   background-color: #fde68a;
   color: #172033;
 }
 
-.exam-question-dot--answered-marked {
-  color: #fff;
-  background: linear-gradient(to bottom, #22c55e 0 50%, #ef4444 50% 100%);
+.exam-passage-editor u {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
+
+.exam-video-frame iframe {
+  display: block;
+  border: 0;
+  user-select: none;
+}
+
+.exam-video-shield {
+  position: absolute;
+  z-index: 1;
+  pointer-events: auto;
+  cursor: default;
+}
+
+.exam-video-shield--top {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4.25rem;
+}
+
+.exam-video-shield--logo {
+  right: 0;
+  bottom: 2.75rem;
+  width: 6rem;
+  height: 2.25rem;
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   .home-scroll-container {

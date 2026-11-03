@@ -116,10 +116,45 @@ export async function submitExam(payload) {
   return data.data || data
 }
 
+function unwrapApiData(data) {
+  return data?.data ?? data?.result ?? data
+}
+
+export async function getLatestPracticeScore(examId) {
+  const { data } = await api.get(`/api/v1/submissions/practice/${examId}/latest-score`)
+  const result = unwrapApiData(data)
+  return result && typeof result === 'object' ? result : null
+}
+
+export async function getMockScores() {
+  const { data } = await api.get('/api/v1/submissions/mock/scores')
+  const result = unwrapApiData(data)
+  const nestedResult = unwrapApiData(result)
+  if (Array.isArray(nestedResult)) return nestedResult
+  return nestedResult?.content || nestedResult?.items || []
+}
+
+export async function getMockReview(examId) {
+  const { data } = await api.get(`/api/v1/submissions/mock/${examId}/review`)
+  return unwrapApiData(data)
+}
+
 export async function getSubmissionPartLogs(submissionId) {
   const { data } = await api.get(`/api/v1/submissions/${submissionId}/part-logs`)
   const result = data?.data || data?.result || data
 
   if (Array.isArray(result)) return result
   return result?.partTimeLogs || result?.partLogs || result?.content || []
+}
+
+export async function getVideoTitles() {
+  const { data } = await api.get('/api/v1/videos/titles')
+  const result = unwrapApiData(data)
+  return Array.isArray(result) ? result : result?.items || result?.content || []
+}
+
+export async function getVideoByTitle(title) {
+  const { data } = await api.get(`/api/v1/videos/title/${encodeURIComponent(title)}`)
+  const result = unwrapApiData(data)
+  return Array.isArray(result) ? result[0] || null : result
 }

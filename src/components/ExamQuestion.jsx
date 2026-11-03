@@ -1,16 +1,31 @@
+import { HighlightableContent } from './PassageViewer'
+import { formatInlineText } from '../utils/textFormatting'
+
 const options = ['A', 'B', 'C', 'D']
 
-export function ExamQuestion({ question, answer, marked, onAnswer, onToggleMark }) {
+export function ExamQuestion({
+  question,
+  answer,
+  marked,
+  onAnswer,
+  onToggleMark,
+  questionRef,
+  highlightedContent,
+  onContentChange,
+}) {
   return (
-    <article className="border-b border-slate-200 px-5 py-5 last:border-0">
+    <article className="border-b border-slate-200 px-5 py-5 last:border-0" ref={questionRef}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[13px] font-semibold leading-6 text-slate-800">
-          <span className="mr-1">Question {question.orderIndex}.</span>
-          {question.content}
-        </p>
+        <HighlightableContent
+          allowHighlight
+          className="min-w-0 text-[13px] font-semibold leading-6 text-slate-800"
+          content={`<p>Question ${question.orderIndex}. ${formatInlineText(question.content)}</p>`}
+          onContentChange={(content) => onContentChange(content, 'stem')}
+          savedContent={highlightedContent?.stem}
+        />
         <button
           aria-label={`Đánh dấu câu ${question.orderIndex}`}
-          className={`shrink-0 text-xl ${marked ? 'text-red-600' : 'text-slate-400 hover:text-slate-700'}`}
+          className={`shrink-0 text-xl ${marked ? 'text-orange-500' : 'text-slate-400 hover:text-slate-700'}`}
           onClick={() => onToggleMark(question.id)}
           type="button"
         >
@@ -35,10 +50,13 @@ export function ExamQuestion({ question, answer, marked, onAnswer, onToggleMark 
               type="radio"
               value={option}
             />
-            <span>
-              <strong className="mr-1">{option}.</strong>
-              {question[`opt${option}`]}
-            </span>
+            <HighlightableContent
+              allowHighlight
+              className="min-w-0 text-[13px]"
+              content={`<p><strong>${option}.</strong> ${formatInlineText(question[`opt${option}`])}</p>`}
+              onContentChange={(content) => onContentChange(content, option)}
+              savedContent={highlightedContent?.[option]}
+            />
           </label>
         ))}
       </div>
