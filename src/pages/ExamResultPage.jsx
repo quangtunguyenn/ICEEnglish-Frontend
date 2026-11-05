@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { getApiErrorMessage, getSubmissionPartLogs } from '../services/api'
+import { getApiErrorMessage, getExamAnswersRevealed, getSubmissionPartLogs } from '../services/api'
 import { formatInlineText } from '../utils/textFormatting'
 
 function formatDate(value) {
@@ -36,6 +36,25 @@ export function ExamResultPage() {
   const [partTimeLogs, setPartTimeLogs] = useState(result?.partTimeLogs || [])
   const [partLogsLoading, setPartLogsLoading] = useState(Boolean(submissionId))
   const [partLogsError, setPartLogsError] = useState('')
+  const [answerReveal, setAnswerReveal] = useState(null)
+  const examId = result?.examId || result?.exam_id
+
+  useEffect(() => {
+    if (!examId) return
+
+    let active = true
+    getExamAnswersRevealed(examId)
+      .then((revealed) => {
+        if (active) setAnswerReveal({ examId, revealed, error: '' })
+      })
+      .catch(() => {
+        if (active) setAnswerReveal({ examId, revealed: false, error: 'Không thể xác minh trạng thái công bố đáp án.' })
+      })
+
+    return () => {
+      active = false
+    }
+  }, [examId])
 
   useEffect(() => {
     if (!submissionId) return
@@ -52,6 +71,33 @@ export function ExamResultPage() {
     if (!result?.totalQuestions) return 0
     return Math.round((result.totalCorrect / result.totalQuestions) * 100)
   }, [result])
+  const currentAnswerReveal = answerReveal?.examId === examId ? answerReveal : null
+  const answersRevealed = currentAnswerReveal?.revealed === true
+  const readingTranslations = (result?.partTranslations || []).filter((part) =>
+    ['READING_8', 'READING_10'].includes(String(part.partType || '').toUpperCase()),
+  )
+  const translationsByType = readingTranslations.reduce((translations, part) => {
+    const partType = String(part.partType || '').toUpperCase()
+    translations.set(partType, [...(translations.get(partType) || []), part])
+    return translations
+  }, new Map())
+  const displayedTranslationCounts = new Map()
+  const answerItems = (result?.details || []).flatMap((question) => {
+    const partType = String(question.part_type || question.partType || '').toUpperCase()
+    const translations = translationsByType.get(partType) || []
+    const translationIndex = displayedTranslationCounts.get(partType) || 0
+    const translation = translations[translationIndex]
+
+    if (!translation) {
+      return [{ type: 'question', question }]
+    }
+
+    displayedTranslationCounts.set(partType, translationIndex + 1)
+    return [
+      { type: 'translation', part: translation },
+      { type: 'question', question },
+    ]
+  })
 
   if (!result) {
     return (
@@ -109,10 +155,31 @@ export function ExamResultPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-2xl font-extrabold text-slate-900">Chi tiết đáp án</h2>
+        <h2 className="text-2xl font-extrabold text-slate-900">
+          {answersRevealed ? 'Chi tiết đáp án' : 'Chi tiết câu trả lời'}
+        </h2>
+        {!currentAnswerReveal && examId && (
+          <p className="mt-3 text-sm text-slate-500">Đang kiểm tra trạng thái công bố đáp án...</p>
+        )}
+        {currentAnswerReveal && !answersRevealed && (
+          <p className="mt-3 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+            {currentAnswerReveal.error || 'Đề thi chưa công bố đáp án. Bạn chỉ có thể xem lựa chọn của mình.'}
+          </p>
+        )}
+        {!examId && (
+          <p className="mt-3 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+            Không xác định được đề thi nên đáp án được ẩn.
+          </p>
+        )}
         <div className="mt-4 space-y-4">
-          {(result.details || []).map((question) => (
-            <QuestionResult key={question.questionId} question={question} />
+          {answerItems.map((item) => item.type === 'translation' ? (
+            <PartTranslation key={`translation-${item.part.partId}`} part={item.part} />
+          ) : (
+            <QuestionResult
+              key={item.question.questionId}
+              question={item.question}
+              showAnswer={answersRevealed}
+            />
           ))}
         </div>
       </section>
@@ -121,6 +188,28 @@ export function ExamResultPage() {
         Làm bài khác
       </Link>
     </div>
+  )
+}
+
+function PartTranslation({ part }) {
+  return (
+    <article className="rounded-xl border border-cyan-200 bg-cyan-50/50 p-5">
+      <h3 className="font-bold text-slate-900">{part.partName || 'Bài đọc'}</h3>
+      <div className="mt-4 grid gap-5 lg:grid-cols-2">
+        <div>
+          <h4 className="text-sm font-bold text-cyan-700">Nguyên văn</h4>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+            {part.passage_text || part.passageText || 'Chưa có nội dung bài đọc.'}
+          </p>
+        </div>
+        <div>
+          <h4 className="text-sm font-bold text-emerald-700">Bản dịch tiếng Việt</h4>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+            {part.translate || 'Chưa có bản dịch.'}
+          </p>
+        </div>
+      </div>
+    </article>
   )
 }
 
@@ -133,12 +222,12 @@ function SummaryCard({ label, value, valueClass = 'text-slate-900' }) {
   )
 }
 
-function QuestionResult({ question }) {
+function QuestionResult({ question, showAnswer }) {
   const isCorrect = question.isCorrect === true
   const video = question.relatedVideo
 
   return (
-    <article className={`rounded-xl border bg-white p-5 shadow-sm ${isCorrect ? 'border-emerald-200' : 'border-red-200'}`}>
+    <article className={`rounded-xl border bg-white p-5 shadow-sm ${showAnswer ? (isCorrect ? 'border-emerald-200' : 'border-red-200') : 'border-slate-200'}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <p
           className="font-bold text-slate-900"
@@ -146,15 +235,19 @@ function QuestionResult({ question }) {
             __html: `Câu ${question.orderIndex}. ${formatInlineText(question.content)}`,
           }}
         />
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-          {isCorrect ? 'Đúng' : 'Sai'}
-        </span>
+        {showAnswer && (
+          <span className={`rounded-full px-3 py-1 text-xs font-bold ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+            {isCorrect ? 'Đúng' : 'Sai'}
+          </span>
+        )}
       </div>
       <div className="mt-4 flex flex-wrap gap-4 text-sm">
         <span className="text-slate-600">Bạn chọn: <strong>{question.selectedOpt || 'Chưa chọn'}</strong></span>
-        <span className="text-slate-600">Đáp án đúng: <strong>{question.correctOpt || '—'}</strong></span>
+        {showAnswer && (
+          <span className="text-slate-600">Đáp án đúng: <strong>{question.correctOpt || '—'}</strong></span>
+        )}
       </div>
-      {question.explanation && (
+      {showAnswer && question.explanation && (
         <p
           className="mt-4 whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm leading-6 text-slate-600"
           dangerouslySetInnerHTML={{
@@ -162,7 +255,7 @@ function QuestionResult({ question }) {
           }}
         />
       )}
-      {!isCorrect && video && (
+      {showAnswer && !isCorrect && video && (
         <a
           className="mt-4 inline-flex text-sm font-bold text-cyan-700 hover:text-cyan-900"
           href={video.video_url || video.videoUrl}

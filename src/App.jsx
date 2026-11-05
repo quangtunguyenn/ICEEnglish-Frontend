@@ -8,6 +8,7 @@ import { ExamTakePage } from './pages/ExamTakePage'
 import { ExamResultPage } from './pages/ExamResultPage'
 import { VocabularyPage } from './pages/VocabularyPage'
 import { VideosPage } from './pages/VideosPage'
+import { HomeworkPage } from './pages/HomeworkPage'
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="/thi-thu" element={<MockExamPage />} />
           <Route path="/thi-thu/:examId" element={<ExamTakePage />} />
           <Route path="/video" element={<VideosPage />} />
+          <Route path="/video/:videoId/homework" element={<HomeworkPage />} />
           <Route path="/tu-vung" element={<VocabularyPage />} />
         </Route>
         <Route path="*" element={<Navigate replace to="/" />} />
