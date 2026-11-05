@@ -9,12 +9,14 @@ import { ExamResultPage } from './pages/ExamResultPage'
 import { VocabularyPage } from './pages/VocabularyPage'
 import { VideosPage } from './pages/VideosPage'
 import { HomeworkPage } from './pages/HomeworkPage'
+import { AdminPage } from './pages/AdminPage'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/dang-nhap" element={<LoginPage />} />
+        <Route path="/quan-tri" element={<AdminPage />} />
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/luyen-de" element={<PracticePage />} />

@@ -1,6 +1,19 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { getApiErrorMessage, loginStudent } from "../services/api";
+import { getApiErrorMessage, getAuthProfile, loginStudent } from "../services/api";
+
+function getUserRole(user) {
+  const roles = [user?.role, ...(Array.isArray(user?.authorities) ? user.authorities : [])]
+  return roles.map((role) => String(role || '').toUpperCase().replace(/^ROLE_/, ''))
+}
+
+function getLoginErrorMessage(error) {
+  if (error?.response?.status === 401) return 'Tên đăng nhập hoặc mật khẩu không đúng.'
+  if (error?.request && !error.response) {
+    return 'Không kết nối được API. Kiểm tra backend và cấu hình mạng rồi thử lại.'
+  }
+  return getApiErrorMessage(error, 'Không thể đăng nhập. Vui lòng thử lại.')
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -28,18 +41,36 @@ export function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      await loginStudent({
+      const loginResult = await loginStudent({
         username: credentials.username.trim(),
         password: credentials.password,
       });
-      navigate(location.state?.from?.pathname || "/", { replace: true });
+      let profile = loginResult?.user || loginResult?.student || null
+      if (!profile || !getUserRole(profile).length) {
+        try {
+          profile = await getAuthProfile()
+        } catch (profileError) {
+          setError(
+            profileError?.request && !profileError.response
+              ? 'Đăng nhập thành công nhưng không thể kết nối để xác minh vai trò. Kiểm tra API /auth/profile.'
+              : getApiErrorMessage(profileError, 'Đăng nhập thành công nhưng không lấy được thông tin tài khoản.'),
+          )
+          return
+        }
+      }
+
+      const roles = getUserRole(profile)
+      if (!roles.length) {
+        setError('Đăng nhập thành công nhưng server chưa trả về vai trò tài khoản.')
+        return
+      }
+      const isStaff = roles.includes('ADMIN') || roles.includes('TEACHER')
+      const requestedPath = location.state?.from?.pathname
+      navigate(isStaff ? '/quan-tri' : requestedPath === '/quan-tri' ? '/' : requestedPath || '/', {
+        replace: true,
+      });
     } catch (requestError) {
-      setError(
-        getApiErrorMessage(
-          requestError,
-          "Tên đăng nhập hoặc mật khẩu không đúng.",
-        ),
-      );
+      setError(getLoginErrorMessage(requestError));
     } finally {
       setIsSubmitting(false);
     }
@@ -52,10 +83,10 @@ export function LoginPage() {
           ICE<span className="text-cyan-500">English</span>
         </Link>
         <h1 className="mt-10 text-3xl font-extrabold text-slate-900">
-          Đăng nhập học sinh
+          Đăng nhập ICEEnglish
         </h1>
         <p className="mt-2 text-slate-500">
-          Tiếp tục hành trình học tiếng Anh của bạn.
+          Đăng nhập để tiếp tục học tập hoặc quản lý nội dung.
         </p>
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
           <label className="block text-sm font-semibold text-slate-700">

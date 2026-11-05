@@ -104,8 +104,8 @@ export function ExamResultPage() {
       <div className="mx-auto max-w-3xl px-6 py-20 text-center">
         <h1 className="text-2xl font-extrabold text-slate-900">Không tìm thấy kết quả</h1>
         <p className="mt-3 text-slate-500">Kết quả có thể đã hết phiên lưu trữ.</p>
-        <Link className="mt-6 inline-flex rounded-lg bg-cyan-500 px-5 py-3 font-bold text-slate-950" to="/luyen-de">
-          Về danh sách luyện đề
+        <Link className="mt-6 inline-flex rounded-lg bg-cyan-500 px-5 py-3 font-bold text-slate-950" to={location.state?.returnTo || '/luyen-de'}>
+          {location.state?.returnTo ? 'Quay lại video' : 'Về danh sách luyện đề'}
         </Link>
       </div>
     )
@@ -184,8 +184,8 @@ export function ExamResultPage() {
         </div>
       </section>
 
-      <Link className="mt-10 inline-flex rounded-lg bg-slate-900 px-5 py-3 font-bold text-white hover:bg-slate-700" to="/luyen-de">
-        Làm bài khác
+      <Link className="mt-10 inline-flex rounded-lg bg-slate-900 px-5 py-3 font-bold text-white hover:bg-slate-700" to={location.state?.returnTo || '/luyen-de'}>
+        {location.state?.returnTo ? 'Quay lại video' : 'Làm bài khác'}
       </Link>
     </div>
   )

@@ -263,8 +263,7 @@ export function HomeworkPage() {
           {answerError && <p className="mt-2 text-sm font-semibold text-red-700">{answerError}</p>}
         </section>
         <section className="space-y-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-          <div className="grid gap-3 sm:grid-cols-4">
-            <ResultStat label="Điểm" value={result.score ?? 0} />
+          <div className="grid gap-3 sm:grid-cols-3">
             <ResultStat label="Tổng câu" value={result.totalQuestions ?? questionItems.length} />
             <ResultStat label="Câu đúng" value={result.totalCorrect ?? 0} />
             <ResultStat label="Câu sai" value={result.totalIncorrect ?? 0} />
@@ -293,29 +292,11 @@ export function HomeworkPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-73px)] min-h-[620px] flex-col overflow-hidden bg-white text-slate-700">
-      <header className="grid h-11 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-t-4 border-blue-900 border-b border-slate-200 bg-white px-4 text-xs">
+    <div className="flex h-[calc(100vh-73px)] min-h-155 flex-col overflow-hidden bg-white text-slate-700">
+      <header className="grid h-11 shrink-0 grid-cols-[auto_1fr] items-center border-t-4 border-t-blue-900 border-b border-b-slate-200 bg-white px-4 text-xs">
         <button className="justify-self-start font-semibold text-blue-700 hover:underline" onClick={() => navigate('/video', { state: { selectedTitle: location.state?.title } })} type="button">
           ← Video bài giảng
         </button>
-        <div className="flex items-center gap-2">
-          <button
-            className="rounded border border-blue-300 px-4 py-1.5 font-semibold text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={partIndex === 0}
-            onClick={() => goToQuestion(partIndex - 1, 0)}
-            type="button"
-          >
-            Quay lại
-          </button>
-          <button
-            className="rounded bg-blue-500 px-4 py-1.5 font-semibold text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={partIndex >= parts.length - 1}
-            onClick={() => goToQuestion(partIndex + 1, 0)}
-            type="button"
-          >
-            Tiếp theo
-          </button>
-        </div>
         <div className="ml-auto flex items-center gap-3">
           <span className="font-bold text-slate-700">Số câu đã trả lời: <b className="text-green-600">{answeredCount}</b> / {questionItems.length}</span>
           <span className="font-mono font-bold text-slate-700">
@@ -371,7 +352,7 @@ export function HomeworkPage() {
                   : answers[question.id]
                     ? 'border-green-500 bg-green-500 text-white'
                     : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200'
-              } ${question.partIndex === partIndex ? '!border-blue-500' : ''}`}
+              } ${question.partIndex === partIndex ? 'border-blue-500!' : ''}`}
               onClick={() => {
                 goToQuestion(
                   question.partIndex,
@@ -388,7 +369,7 @@ export function HomeworkPage() {
         {error && <p className="col-span-full text-xs text-red-600">{error}</p>}
       </footer>
       {(!hasEnteredFullscreen || securityWarning) && (
-        <div aria-modal="true" className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/75 p-6 backdrop-blur-sm" role="dialog">
+        <div aria-modal="true" className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/75 p-6 backdrop-blur-sm" role="dialog">
           <div className="w-full max-w-md rounded-xl bg-white p-6 text-center shadow-2xl">
             <h2 className="text-lg font-bold text-slate-900">
               {securityWarning ? 'Vui lòng quay lại chế độ làm bài' : 'Bắt đầu làm bài tập'}

@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { PageIntro } from '../components/PageIntro'
-import { getApiErrorMessage, getGeneralExams, getLatestPracticeScore } from '../services/api'
+import {
+  getApiErrorMessage,
+  getGeneralExams,
+  getLatestPracticeReview,
+  getLatestPracticeScore,
+} from '../services/api'
 
 export function PracticePage() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [exams, setExams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [reviewingExamId, setReviewingExamId] = useState('')
 
   useEffect(() => {
     getGeneralExams()
@@ -26,6 +33,25 @@ export function PracticePage() {
       .catch((requestError) => setError(getApiErrorMessage(requestError, 'Không thể tải danh sách bài thi. Vui lòng thử lại.')))
       .finally(() => setLoading(false))
   }, [])
+
+  async function handleReview(exam) {
+    setReviewingExamId(exam.id)
+    setError('')
+    try {
+      const review = await getLatestPracticeReview(exam.id)
+      const submissionId = review?.submissionId || review?.submission_id
+      if (!submissionId) {
+        throw new Error('API review không trả về submissionId.')
+      }
+
+      sessionStorage.setItem(`exam-result:${submissionId}`, JSON.stringify(review))
+      navigate(`/ket-qua/${submissionId}`, { state: { result: review } })
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'Không thể tải bài thi gần nhất.'))
+    } finally {
+      setReviewingExamId('')
+    }
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-16">
@@ -59,9 +85,19 @@ export function PracticePage() {
               {exam.durationMinutes || exam.duration || 0} phút · {exam.totalQuestions || exam.questionCount || 'Nhiều'} câu hỏi
             </p>
             {exam.latestScore && (
-              <p className="mt-3 text-sm font-bold text-emerald-600">
-                Điểm gần nhất: {exam.latestScore.score ?? '—'}
-              </p>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-bold text-emerald-600">
+                  Điểm gần nhất: {exam.latestScore.score ?? '—'}
+                </p>
+                <button
+                  className="text-sm font-bold text-cyan-800 underline decoration-cyan-300 underline-offset-4 hover:text-cyan-950 disabled:cursor-wait disabled:opacity-50"
+                  disabled={Boolean(reviewingExamId)}
+                  onClick={() => handleReview(exam)}
+                  type="button"
+                >
+                  {reviewingExamId === exam.id ? 'Đang tải...' : 'Xem lại bài thi gần nhất'}
+                </button>
+              </div>
             )}
             <Link
               className="mt-6 inline-flex justify-center rounded-lg bg-cyan-500 px-4 py-3 font-bold text-slate-950 transition hover:bg-cyan-400"

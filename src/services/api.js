@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseURL: import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '' : 'http://localhost:8080'),
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -44,6 +44,7 @@ export async function loginStudent(credentials) {
     throw new Error('Backend đăng nhập thành công nhưng không trả về access token.')
   }
 
+  localStorage.removeItem('currentUser')
   localStorage.setItem('accessToken', accessToken)
   const refreshToken = result?.refreshToken || result?.refresh_token
   if (refreshToken) {
@@ -54,6 +55,60 @@ export async function loginStudent(credentials) {
   }
 
   return result
+}
+
+export async function getAuthProfile() {
+  const { data } = await api.get('/api/v1/auth/profile')
+  const profile = data?.data || data?.result || data
+  localStorage.setItem('currentUser', JSON.stringify(profile))
+  return profile
+}
+
+export async function createStudent(payload) {
+  const { data } = await api.post('/api/v1/auth/students', payload)
+  return data?.data || data?.result || data
+}
+
+export async function uploadLearningBundle(file) {
+  const payload = new FormData()
+  payload.append('file', file)
+  const { data } = await api.post('/api/v1/videos/learning-bundle', payload, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data?.data || data?.result || data
+}
+
+export async function importExam(file, examType) {
+  const payload = new FormData()
+  payload.append('file', file)
+  const { data } = await api.post('/api/v1/exams/import', payload, {
+    params: { examType },
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data?.data || data?.result || data
+}
+
+export async function getAdminExams(mode) {
+  const { data } = await api.get('/api/v1/exams', { params: mode ? { mode } : {} })
+  return extractExamList(data)
+}
+
+export async function getExamPreview(examId) {
+  const { data } = await api.get(`/api/v1/exams/${examId}/preview`)
+  return data?.data || data?.result || data
+}
+
+export async function publishExam(examId) {
+  await api.patch(`/api/v1/exams/${examId}/publish`)
+}
+
+export async function archiveExam(examId) {
+  await api.patch(`/api/v1/exams/${examId}/archive`)
+}
+
+export async function toggleExamAnswersRevealed(examId) {
+  const { data } = await api.patch(`/api/v1/exams/${examId}/answers-revealed`)
+  return data?.data || data?.result || data
 }
 
 export function getApiErrorMessage(error, fallback = 'Đã xảy ra lỗi. Vui lòng thử lại.') {
@@ -109,7 +164,11 @@ export async function getExam(examId) {
 export async function getExamAnswersRevealed(examId) {
   const { data } = await api.get(`/api/v1/exams/${examId}/answers-revealed`)
   const result = unwrapApiData(data)
-  return result?.is_answers_revealed === true || result?.isAnswersRevealed === true
+  const revealFlag = Object.entries(result || {}).find(([key]) => {
+    const normalizedKey = key.toLowerCase().replaceAll('_', '')
+    return normalizedKey === 'isanswersrevealed' || normalizedKey === 'isanswerrevealed'
+  })?.[1]
+  return revealFlag === true
 }
 
 export async function startExam(examId) {
@@ -135,6 +194,16 @@ export async function getLatestPracticeScore(examId) {
   const { data } = await api.get(`/api/v1/submissions/practice/${examId}/latest-score`)
   const result = unwrapApiData(data)
   return result && typeof result === 'object' ? result : null
+}
+
+export async function getLatestPracticeReview(examId) {
+  const { data } = await api.get(`/api/v1/submissions/practice/${examId}/latest-review`)
+  return unwrapApiData(data)
+}
+
+export async function getLatestHomeworkReview(examId) {
+  const { data } = await api.get(`/api/v1/submissions/homework/${examId}/latest-review`)
+  return unwrapApiData(data)
 }
 
 export async function getMockScores() {

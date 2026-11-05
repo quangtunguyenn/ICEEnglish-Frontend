@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import {
   getApiErrorMessage,
   getVideoByTitle,
+  getLatestHomeworkReview,
   getVideoLearningContent,
   getVideoHomeworkAnswerUrl,
   getVideoHomeworkAnswers,
@@ -70,6 +71,8 @@ export function VideosPage() {
   const [fetchedAnswer, setFetchedAnswer] = useState({ key: '', url: '', error: '' })
   const [loadingVocabularyPractice, setLoadingVocabularyPractice] = useState(false)
   const [vocabularyPracticeError, setVocabularyPracticeError] = useState('')
+  const [reviewingHomework, setReviewingHomework] = useState(false)
+  const [homeworkReviewError, setHomeworkReviewError] = useState('')
 
   useEffect(() => {
     getVideoTitles()
@@ -216,6 +219,36 @@ export function VideosPage() {
     }
   }
 
+  async function reviewLatestHomework() {
+    if (!homeworkExamId || reviewingHomework) return
+
+    setReviewingHomework(true)
+    setHomeworkReviewError('')
+    try {
+      const review = await getLatestHomeworkReview(homeworkExamId)
+      const submissionId = review?.submissionId || review?.submission_id
+      if (!submissionId) throw new Error('API review không trả về submissionId.')
+
+      const reviewResult = {
+        ...review,
+        examId: review.examId || review.exam_id || homeworkExamId,
+        examTitle: review.examTitle || review.exam_title || homework.title,
+      }
+      sessionStorage.setItem(`exam-result:${submissionId}`, JSON.stringify(reviewResult))
+      sessionStorage.setItem('selected-video-title', videoTitle)
+      sessionStorage.setItem('selected-video-id', currentVideoId)
+      navigate(`/ket-qua/${submissionId}`, {
+        state: { result: reviewResult, returnTo: '/video' },
+      })
+    } catch (requestError) {
+      setHomeworkReviewError(
+        getApiErrorMessage(requestError, 'Không thể tải bài tập đã làm gần nhất.'),
+      )
+    } finally {
+      setReviewingHomework(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
       {error && <p className="mb-6 rounded-lg bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</p>}
@@ -296,6 +329,19 @@ export function VideosPage() {
                       >
                         Vào làm bài tập về nhà
                       </button>
+                      <button
+                        className="mt-3 block rounded-lg border border-slate-300 bg-white px-5 py-3 font-bold text-slate-800 hover:border-cyan-600 hover:text-cyan-800 disabled:cursor-wait disabled:opacity-50"
+                        disabled={reviewingHomework}
+                        onClick={reviewLatestHomework}
+                        type="button"
+                      >
+                        {reviewingHomework ? 'Đang tải bài đã làm...' : 'Xem lại bài tập về nhà gần nhất'}
+                      </button>
+                      {homeworkReviewError && (
+                        <p aria-live="polite" className="mt-3 text-sm font-semibold text-red-700">
+                          {homeworkReviewError}
+                        </p>
+                      )}
                       {completionToken && (
                         <div className="mt-4">
                           {loadingHomeworkAnswer && <p className="text-sm text-slate-600">Đang tải liên kết đáp án...</p>}
