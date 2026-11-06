@@ -2,6 +2,18 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
+## Video ôn tập sau khi làm bài
+
+Kết quả nộp bài và xem lại bài luyện đề, thi thử cần trả về `relatedVideo` trong
+`details` của từng câu có video ôn tập. Đối tượng này cần có `videoId` (ID video
+trong hệ thống) và có thể có `videoTitle`. Frontend hiển thị liên kết bất kể câu
+trả lời đúng, sai hay chưa chọn, kể cả khi đáp án chưa được công bố. Backend cần
+trả thông tin video cho tất cả các trường hợp đó.
+
+Liên kết mở `/video?videoId=...`; trang video sử dụng API danh sách video và
+`GET /api/v1/videos/{videoId}/learning-content` hiện có. API này cần trả nội dung
+phát video hoặc danh sách video cần chứa thông tin phát của video tương ứng.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)

@@ -10,6 +10,7 @@ import {
   getVideoTitles,
   getVideoVocabularies,
 } from '../services/api'
+import { getSelectedVideo, getVideoId, getVideoTitle, sortVideoTitles } from '../utils/videoTitles'
 
 function getYoutubeEmbedUrl(videoUrl) {
   const value = String(videoUrl || '').trim()
@@ -41,16 +42,6 @@ function getYoutubeEmbedUrl(videoUrl) {
   }
 }
 
-function getVideoId(video) {
-  return video?.videoId || video?.video_id || video?.id
-}
-
-function getVideoTitle(video) {
-  return typeof video === 'string'
-    ? video
-    : video?.title || video?.videoTitle || video?.video_title || ''
-}
-
 function getHomeworkExamId(homework) {
   return homework?.examId || homework?.exam_id || homework?.id
 }
@@ -59,8 +50,14 @@ export function VideosPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [titles, setTitles] = useState([])
-  const selectedTitle = location.state?.selectedTitle || sessionStorage.getItem('selected-video-title') || ''
-  const selectedVideoId = location.state?.videoId || sessionStorage.getItem('selected-video-id') || ''
+  const requestedVideoId = new URLSearchParams(location.search).get('videoId')
+  const hasLocationSelection = Boolean(requestedVideoId || location.state?.selectedTitle || location.state?.videoId)
+  const selectedTitle = hasLocationSelection
+    ? location.state?.selectedTitle || ''
+    : sessionStorage.getItem('selected-video-title') || ''
+  const selectedVideoId = hasLocationSelection
+    ? requestedVideoId || location.state?.videoId || ''
+    : sessionStorage.getItem('selected-video-id') || ''
   const [video, setVideo] = useState(null)
   const [loadingTitles, setLoadingTitles] = useState(true)
   const [loadedVideoKey, setLoadedVideoKey] = useState('')
@@ -77,7 +74,7 @@ export function VideosPage() {
   useEffect(() => {
     getVideoTitles()
       .then((items) => {
-        setTitles(items)
+        setTitles(sortVideoTitles(items))
       })
       .catch((requestError) =>
         setError(getApiErrorMessage(requestError, 'Không thể tải danh sách video.')),
@@ -85,14 +82,12 @@ export function VideosPage() {
       .finally(() => setLoadingTitles(false))
   }, [])
 
-  const activeVideo =
-    titles.find((item) => getVideoId(item) === selectedVideoId) ||
-    titles.find((item) => getVideoTitle(item) === selectedTitle) ||
-    titles[0] ||
-    null
+  const activeVideo = useMemo(
+    () => getSelectedVideo(titles, selectedVideoId, selectedTitle),
+    [selectedTitle, selectedVideoId, titles],
+  )
   const activeTitle = getVideoTitle(activeVideo)
-  const activeVideoId = getVideoId(activeVideo)
-  const activeVideoKey = activeVideoId || activeTitle
+  const activeVideoKey = getVideoId(activeVideo) || activeTitle
 
   useEffect(() => {
     if (!activeVideo) return
@@ -107,10 +102,16 @@ export function VideosPage() {
 
         const videoId = getVideoId(videoRecord)
         if (!videoId) throw new Error('Video không có videoId hợp lệ.')
+        if (selectedVideoId && String(videoId) !== String(selectedVideoId)) {
+          throw new Error('Video tìm được không khớp với video đã chọn.')
+        }
 
         const content = await getVideoLearningContent(videoId)
         if (!active) return
 
+        sessionStorage.setItem('selected-video-id', videoId)
+        if (activeTitle) sessionStorage.setItem('selected-video-title', activeTitle)
+        else sessionStorage.removeItem('selected-video-title')
         setVideo({ ...videoRecord, ...content })
         setLoadedVideoKey(activeVideoKey)
         setDocumentUrl(
@@ -129,7 +130,7 @@ export function VideosPage() {
     return () => {
       active = false
     }
-  }, [activeVideo, activeVideoKey, activeTitle])
+  }, [activeVideo, activeVideoKey, activeTitle, selectedVideoId])
   const currentVideoId = getVideoId(video)
   const homeworkExamId = getHomeworkExamId(homework)
   const homeworkCompletionKey = currentVideoId && homeworkExamId
@@ -187,7 +188,22 @@ export function VideosPage() {
       ),
     [video],
   )
-  const videoTitle = video?.title || activeTitle
+  const videoTitle = loadingVideo ? activeTitle : video?.title || activeTitle
+
+  function selectVideo(item) {
+    const title = getVideoTitle(item)
+    const videoId = getVideoId(item)
+    sessionStorage.setItem('selected-video-title', title)
+    if (videoId) {
+      sessionStorage.setItem('selected-video-id', videoId)
+    } else {
+      sessionStorage.removeItem('selected-video-id')
+    }
+    setError('')
+    setVocabularyPracticeError('')
+    setHomeworkReviewError('')
+    navigate('/video', { replace: true, state: { selectedTitle: title, videoId } })
+  }
 
   async function openVocabularyPractice(videoId, title, knownVocabularies = []) {
     if (!videoId || loadingVocabularyPractice) return
@@ -238,7 +254,7 @@ export function VideosPage() {
       sessionStorage.setItem('selected-video-title', videoTitle)
       sessionStorage.setItem('selected-video-id', currentVideoId)
       navigate(`/ket-qua/${submissionId}`, {
-        state: { result: reviewResult, returnTo: '/video' },
+        state: { result: reviewResult, returnTo: '/video', hideVideos: true },
       })
     } catch (requestError) {
       setHomeworkReviewError(
@@ -321,6 +337,7 @@ export function VideosPage() {
                         className="mt-5 rounded-lg bg-cyan-500 px-5 py-3 font-bold text-slate-950 hover:bg-cyan-400"
                         onClick={() => {
                           sessionStorage.setItem('selected-video-title', videoTitle)
+                          sessionStorage.setItem('selected-video-id', currentVideoId)
                           navigate(`/video/${encodeURIComponent(getVideoId(video))}/homework`, {
                             state: { homework, title: videoTitle },
                           })
@@ -387,16 +404,16 @@ export function VideosPage() {
               const itemKey = videoId || title
 
               return (
-              <div className={`mb-3 rounded-xl border p-3 ${activeVideoId === videoId ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200'}`} key={itemKey}>
+              <div className={`mb-3 rounded-xl border p-3 ${activeVideo === item ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200'}`} key={itemKey}>
                 <button
                   className="w-full text-left text-sm font-extrabold text-red-600"
-                  disabled={!videoId || loadingVocabularyPractice}
-                  onClick={() => openVocabularyPractice(videoId, title)}
+                  aria-current={activeVideo === item ? 'true' : undefined}
+                  onClick={() => selectVideo(item)}
                   type="button"
                 >
                   {index + 1}. {title}
                 </button>
-                {activeVideoId === videoId && (
+                {activeVideo === item && (
                   <ul className="mt-2 space-y-1 text-xs font-semibold text-slate-600">
                     <li><button className="hover:text-cyan-700" onClick={() => document.getElementById('document')?.scrollIntoView({ behavior: 'smooth' })} type="button">• File tài liệu</button></li>
                     <li><button className="hover:text-cyan-700" onClick={() => document.getElementById('homework')?.scrollIntoView({ behavior: 'smooth' })} type="button">• Bài tập về nhà</button></li>

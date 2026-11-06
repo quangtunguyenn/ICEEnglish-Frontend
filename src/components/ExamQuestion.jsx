@@ -12,12 +12,13 @@ export function ExamQuestion({
   questionRef,
   highlightedContent,
   onContentChange,
+  allowHighlight = true,
 }) {
   return (
     <article className="border-b border-slate-200 px-5 py-5 last:border-0" ref={questionRef}>
       <div className="flex items-start justify-between gap-3">
         <HighlightableContent
-          allowHighlight
+          allowHighlight={allowHighlight}
           className="min-w-0 text-[13px] font-semibold leading-6 text-slate-800"
           content={`<p>Question ${question.orderIndex}. ${formatInlineText(question.content)}</p>`}
           onContentChange={(content) => onContentChange(content, 'stem')}
@@ -51,7 +52,7 @@ export function ExamQuestion({
               value={option}
             />
             <HighlightableContent
-              allowHighlight
+              allowHighlight={allowHighlight}
               className="min-w-0 text-[13px]"
               content={`<p><strong>${option}.</strong> ${formatInlineText(question[`opt${option}`])}</p>`}
               onContentChange={(content) => onContentChange(content, option)}

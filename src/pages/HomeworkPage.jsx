@@ -272,13 +272,34 @@ export function HomeworkPage() {
             {(result.details || []).map((detail, index) => (
               <article className="rounded-xl border border-slate-200 bg-white p-4" key={detail.questionId || index}>
                 <p className="font-bold text-slate-900">{detail.orderIndex || index + 1}. {detail.content}</p>
+                <ul className="mt-3 grid gap-2">
+                  {['A', 'B', 'C', 'D'].map((key) => {
+                    const text = detail[`opt${key}`]
+                    if (text == null || text === '') return null
+                    const selected = detail.selectedOpt === key
+                    const correct = detail.correctOpt === key
+                    const tone = correct
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                      : selected
+                        ? 'border-red-300 bg-red-50 text-red-900'
+                        : 'border-slate-200 text-slate-700'
+
+                    return (
+                      <li className={`flex flex-wrap items-start gap-2 rounded-lg border px-3 py-2 text-sm ${tone}`} key={key}>
+                        <span className="min-w-0 flex-1"><strong>{key}.</strong> {text}</span>
+                        {selected && <span className="text-xs font-bold">Bạn chọn</span>}
+                        {correct && <span className="text-xs font-bold">Đáp án đúng</span>}
+                      </li>
+                    )
+                  })}
+                </ul>
                 <p className="mt-2 text-sm text-slate-600">
                   Bạn chọn: <strong>{detail.selectedOpt || 'Chưa chọn'}</strong> · Đáp án đúng: <strong>{detail.correctOpt || '—'}</strong>
                 </p>
                 <p className={`mt-2 text-sm font-bold ${detail.isCorrect ? 'text-emerald-700' : 'text-red-700'}`}>
                   {detail.isCorrect ? 'Đúng' : 'Sai'}
                 </p>
-                {detail.explanation && <p className="mt-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{detail.explanation}</p>}
+                {detail.explanation && <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-600"><strong>Giải thích:</strong> {detail.explanation}</p>}
               </article>
             ))}
           </div>

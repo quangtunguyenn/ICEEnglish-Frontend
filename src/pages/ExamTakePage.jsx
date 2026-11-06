@@ -288,6 +288,7 @@ export function ExamTakePage() {
         <section className="min-h-0 overflow-y-auto bg-white">
           {activePart.questions.map((question) => (
             <ExamQuestion
+              allowHighlight={!isMock}
               answer={answers[question.id]}
               key={question.id}
               marked={markedQuestions[question.id]}

@@ -29,6 +29,47 @@ function readStoredResult(submissionId) {
   }
 }
 
+function groupQuestionsByPart(result) {
+  const details = result?.details || []
+  const translations = new Map(
+    (result?.partTranslations || []).map((part) => [part.partId, part]),
+  )
+  const parts = [...(result?.parts || [])].sort(
+    (first, second) => (first.orderIndex ?? 0) - (second.orderIndex ?? 0),
+  )
+  const groups = new Map(parts.map((part) => [part.partId, {
+    key: part.partId,
+    name: part.partName,
+    passageText: part.passageText || part.passage_text || '',
+    translate: translations.get(part.partId)?.translate || '',
+    questions: [],
+  }]))
+
+  details.forEach((question) => {
+    const key = question.partId || 'ungrouped'
+    if (!groups.has(key)) {
+      const translation = translations.get(key)
+      groups.set(key, {
+        key,
+        name: translation?.partName || '',
+        passageText: translation?.passage_text || translation?.passageText || '',
+        translate: translation?.translate || '',
+        questions: [],
+      })
+    }
+    groups.get(key).questions.push(question)
+  })
+
+  return [...groups.values()]
+    .filter((group) => group.questions.length > 0)
+    .map((group) => ({
+      ...group,
+      questions: [...group.questions].sort(
+        (first, second) => (first.orderIndex ?? 0) - (second.orderIndex ?? 0),
+      ),
+    }))
+}
+
 export function ExamResultPage() {
   const { submissionId } = useParams()
   const location = useLocation()
@@ -73,31 +114,7 @@ export function ExamResultPage() {
   }, [result])
   const currentAnswerReveal = answerReveal?.examId === examId ? answerReveal : null
   const answersRevealed = currentAnswerReveal?.revealed === true
-  const readingTranslations = (result?.partTranslations || []).filter((part) =>
-    ['READING_8', 'READING_10'].includes(String(part.partType || '').toUpperCase()),
-  )
-  const translationsByType = readingTranslations.reduce((translations, part) => {
-    const partType = String(part.partType || '').toUpperCase()
-    translations.set(partType, [...(translations.get(partType) || []), part])
-    return translations
-  }, new Map())
-  const displayedTranslationCounts = new Map()
-  const answerItems = (result?.details || []).flatMap((question) => {
-    const partType = String(question.part_type || question.partType || '').toUpperCase()
-    const translations = translationsByType.get(partType) || []
-    const translationIndex = displayedTranslationCounts.get(partType) || 0
-    const translation = translations[translationIndex]
-
-    if (!translation) {
-      return [{ type: 'question', question }]
-    }
-
-    displayedTranslationCounts.set(partType, translationIndex + 1)
-    return [
-      { type: 'translation', part: translation },
-      { type: 'question', question },
-    ]
-  })
+  const answerParts = useMemo(() => groupQuestionsByPart(result), [result])
 
   if (!result) {
     return (
@@ -163,7 +180,7 @@ export function ExamResultPage() {
         )}
         {currentAnswerReveal && !answersRevealed && (
           <p className="mt-3 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
-            {currentAnswerReveal.error || 'Đề thi chưa công bố đáp án. Bạn chỉ có thể xem lựa chọn của mình.'}
+            {currentAnswerReveal.error || 'Đề thi chưa công bố đáp án. Bạn vẫn có thể xem lựa chọn và video ôn tập nếu có.'}
           </p>
         )}
         {!examId && (
@@ -171,15 +188,20 @@ export function ExamResultPage() {
             Không xác định được đề thi nên đáp án được ẩn.
           </p>
         )}
-        <div className="mt-4 space-y-4">
-          {answerItems.map((item) => item.type === 'translation' ? (
-            <PartTranslation key={`translation-${item.part.partId}`} part={item.part} />
-          ) : (
-            <QuestionResult
-              key={item.question.questionId}
-              question={item.question}
-              showAnswer={answersRevealed}
-            />
+        <div className="mt-4 space-y-8">
+          {answerParts.map((part) => (
+            <section className="space-y-4" key={part.key}>
+              {part.name && <h3 className="text-lg font-extrabold text-slate-900">{part.name}</h3>}
+              {part.passageText && <PartPassage part={part} />}
+              {part.questions.map((question) => (
+                <QuestionResult
+                  key={question.questionId}
+                  question={question}
+                  showAnswer={answersRevealed}
+                  showVideo={!location.state?.hideVideos}
+                />
+              ))}
+            </section>
           ))}
         </div>
       </section>
@@ -188,28 +210,6 @@ export function ExamResultPage() {
         {location.state?.returnTo ? 'Quay lại video' : 'Làm bài khác'}
       </Link>
     </div>
-  )
-}
-
-function PartTranslation({ part }) {
-  return (
-    <article className="rounded-xl border border-cyan-200 bg-cyan-50/50 p-5">
-      <h3 className="font-bold text-slate-900">{part.partName || 'Bài đọc'}</h3>
-      <div className="mt-4 grid gap-5 lg:grid-cols-2">
-        <div>
-          <h4 className="text-sm font-bold text-cyan-700">Nguyên văn</h4>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-            {part.passage_text || part.passageText || 'Chưa có nội dung bài đọc.'}
-          </p>
-        </div>
-        <div>
-          <h4 className="text-sm font-bold text-emerald-700">Bản dịch tiếng Việt</h4>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-            {part.translate || 'Chưa có bản dịch.'}
-          </p>
-        </div>
-      </div>
-    </article>
   )
 }
 
@@ -222,9 +222,33 @@ function SummaryCard({ label, value, valueClass = 'text-slate-900' }) {
   )
 }
 
-function QuestionResult({ question, showAnswer }) {
+function PartPassage({ part }) {
+  return (
+    <article className="rounded-xl border border-cyan-200 bg-cyan-50/50 p-5">
+      <div className={part.translate ? 'grid gap-5 lg:grid-cols-2' : ''}>
+        <div>
+          <h4 className="text-sm font-bold text-cyan-700">{part.translate ? 'Nguyên văn' : 'Bài đọc'}</h4>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{part.passageText}</p>
+        </div>
+        {part.translate && (
+          <div>
+            <h4 className="text-sm font-bold text-emerald-700">Bản dịch tiếng Việt</h4>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{part.translate}</p>
+          </div>
+        )}
+      </div>
+    </article>
+  )
+}
+
+const optionKeys = ['A', 'B', 'C', 'D']
+
+function QuestionResult({ question, showAnswer, showVideo = true }) {
   const isCorrect = question.isCorrect === true
-  const video = question.relatedVideo
+  const video = showVideo ? question.relatedVideo || question.related_video : null
+  const videoId = video?.videoId ?? video?.video_id ?? video?.id
+  const videoTitle = video?.videoTitle || video?.video_title || video?.title
+  const hasVideoId = videoId != null && String(videoId).trim() !== ''
 
   return (
     <article className={`rounded-xl border bg-white p-5 shadow-sm ${showAnswer ? (isCorrect ? 'border-emerald-200' : 'border-red-200') : 'border-slate-200'}`}>
@@ -241,6 +265,30 @@ function QuestionResult({ question, showAnswer }) {
           </span>
         )}
       </div>
+      <ul className="mt-4 grid gap-2">
+        {optionKeys.map((key) => {
+          const text = question[`opt${key}`]
+          if (text == null || text === '') return null
+          const selected = question.selectedOpt === key
+          const correct = showAnswer && question.correctOpt === key
+          const tone = correct
+            ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+            : selected
+              ? showAnswer ? 'border-red-300 bg-red-50 text-red-900' : 'border-cyan-300 bg-cyan-50 text-cyan-900'
+              : 'border-slate-200 text-slate-700'
+
+          return (
+            <li className={`flex flex-wrap items-start gap-2 rounded-lg border px-3 py-2 text-sm ${tone}`} key={key}>
+              <span
+                className="min-w-0 flex-1"
+                dangerouslySetInnerHTML={{ __html: `<strong>${key}.</strong> ${formatInlineText(text)}` }}
+              />
+              {selected && <span className="text-xs font-bold">Bạn chọn</span>}
+              {correct && <span className="text-xs font-bold">Đáp án đúng</span>}
+            </li>
+          )
+        })}
+      </ul>
       <div className="mt-4 flex flex-wrap gap-4 text-sm">
         <span className="text-slate-600">Bạn chọn: <strong>{question.selectedOpt || 'Chưa chọn'}</strong></span>
         {showAnswer && (
@@ -255,15 +303,20 @@ function QuestionResult({ question, showAnswer }) {
           }}
         />
       )}
-      {showAnswer && !isCorrect && video && (
-        <a
-          className="mt-4 inline-flex text-sm font-bold text-cyan-700 hover:text-cyan-900"
-          href={video.video_url || video.videoUrl}
-          rel="noreferrer"
-          target="_blank"
+      {video && hasVideoId && (
+        <Link
+          className="mt-4 inline-flex items-center rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-bold text-cyan-800 hover:border-cyan-400 hover:bg-cyan-100"
+          state={{ selectedTitle: videoTitle }}
+          to={`/video?videoId=${encodeURIComponent(videoId)}`}
         >
-          Xem video ôn tập: {video.videoTitle}
-        </a>
+          Xem video ôn tập{videoTitle ? `: ${videoTitle}` : ''}
+        </Link>
+      )}
+      {video && !hasVideoId && (
+        <div className="mt-4 text-sm font-semibold text-amber-800">
+          {videoTitle && <p>Video ôn tập: {videoTitle}</p>}
+          <p>Không thể mở video ôn tập vì dữ liệu chưa có video ID.</p>
+        </div>
       )}
     </article>
   )
