@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { formatPracticeSubmissionDate } from '../utils/practiceHistory'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '' : 'http://localhost:8080'),
@@ -199,6 +200,37 @@ export async function getLatestPracticeScore(examId) {
 export async function getLatestPracticeReview(examId) {
   const { data } = await api.get(`/api/v1/submissions/practice/${examId}/latest-review`)
   return unwrapApiData(data)
+}
+
+export async function getPracticeHistory(examId, page = 0, size = 20) {
+  const { data } = await api.get(`/api/v1/submissions/practice/${encodeURIComponent(examId)}/history`, {
+    params: { page, size },
+  })
+  const result = unwrapApiData(data)
+  if (
+    !result || String(result.examId) !== String(examId) || !Array.isArray(result.items) ||
+    !Number.isInteger(result.page) || result.page !== page ||
+    !Number.isInteger(result.totalPages) || result.totalPages < 0 ||
+    !Number.isInteger(result.totalElements) || result.totalElements < 0 ||
+    result.items.some((item) => !item?.submissionId || !item.submittedAt)
+  ) {
+    throw new Error('Dữ liệu lịch sử bài làm không hợp lệ.')
+  }
+  result.items.forEach((item) => formatPracticeSubmissionDate(item.submittedAt))
+  return result
+}
+
+export async function getPracticeSubmissionReview(submissionId) {
+  const { data } = await api.get(`/api/v1/submissions/practice/${encodeURIComponent(submissionId)}/review`)
+  const result = unwrapApiData(data)
+  if (
+    !result || String(result.submissionId) !== String(submissionId) ||
+    !result.examId || !Array.isArray(result.details)
+  ) {
+    throw new Error('Dữ liệu chi tiết bài làm không hợp lệ.')
+  }
+  formatPracticeSubmissionDate(result.submittedAt)
+  return result
 }
 
 export async function getLatestHomeworkReview(examId) {

@@ -20,6 +20,11 @@ export function useExamTimer(activePartId) {
     setPartTimes({ ...timesRef.current })
   }, [])
 
+  const restorePartTimes = useCallback((savedTimes) => {
+    timesRef.current = { ...savedTimes }
+    setPartTimes({ ...savedTimes })
+  }, [])
+
   useEffect(() => {
     flushActivePart()
     activePartRef.current = activePartId
@@ -50,11 +55,14 @@ export function useExamTimer(activePartId) {
     }
   }, [flushActivePart])
 
+  const getPartTimes = useCallback(() => {
+    flushActivePart()
+    return { ...timesRef.current }
+  }, [flushActivePart])
+
   return {
     partTimes,
-    getPartTimes: () => {
-      flushActivePart()
-      return { ...timesRef.current }
-    },
+    restorePartTimes,
+    getPartTimes,
   }
 }

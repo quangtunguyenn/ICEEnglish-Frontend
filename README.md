@@ -2,6 +2,34 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
+## Lịch sử luyện đề
+
+Trang luyện đề hiển thị liên kết lịch sử khi API danh sách đề trả
+`hasSubmitted: true` hoặc `submittedCount > 0`. Nếu thiếu cả hai trường,
+frontend kiểm tra lịch sử của đề; lỗi kiểm tra được thông báo và có thể thử lại.
+Lịch sử được phân trang và hiển thị thời điểm nộp theo giờ Việt Nam. Chi tiết
+của từng lượt được tải từ server theo `submissionId`, kể cả khi mở trực tiếp
+hoặc tải lại trang. Hợp đồng API được mô tả trong
+[PRACTICE-HISTORY-API.md](./PRACTICE-HISTORY-API.md).
+
+## Lưu bài thi thử trên trình duyệt
+
+Học sinh bấm **Lưu** để lưu đáp án và thời gian theo Part trên trình duyệt,
+không đồng bộ bản nháp với server. Chỉ bản lưu gần nhất được khôi phục khi
+quay lại trên cùng trình duyệt và thiết bị; thay đổi chưa lưu có thể mất,
+và xóa dữ liệu trình duyệt hoặc đổi thiết bị sẽ mất khả năng khôi phục.
+Không mở cùng lượt thi trong nhiều tab hoặc thiết bị vì không có cơ chế
+phối hợp hay giải quyết xung đột giữa các phiên.
+
+Hạn thi được lưu trên máy và tiếp tục trôi qua khi đóng tab. Đồng hồ phụ thuộc
+giờ hệ thống, có thể bị thay đổi và không được backend xác thực; không có chức
+năng admin điều chỉnh thời gian. Nếu hết giờ khi trang đang mở, frontend thử
+nộp đáp án hiện tại. Nếu quay lại sau khi hết giờ, frontend thử nộp bản lưu
+gần nhất; nếu chưa từng bấm Lưu thì bản đó không có đáp án. Khi mất mạng hoặc
+nộp chưa xác nhận, bản lưu được giữ lại và có thể thử nộp lại sau khi kết nối.
+Không có tác vụ backend tự nộp từ bản lưu local. Việc nộp lại sau hạn hoặc
+sau khi mất phản hồi còn phụ thuộc vào quy tắc và khả năng xử lý của API nộp bài.
+
 ## Video ôn tập sau khi làm bài
 
 Kết quả nộp bài và xem lại bài luyện đề, thi thử cần trả về `relatedVideo` trong

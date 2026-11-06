@@ -1,56 +1,58 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { PageIntro } from '../components/PageIntro'
 import {
   getApiErrorMessage,
   getGeneralExams,
-  getLatestPracticeReview,
   getLatestPracticeScore,
+  getPracticeHistory,
 } from '../services/api'
+
+function getSubmittedFlag(exam) {
+  if (typeof exam.hasSubmitted === 'boolean') return exam.hasSubmitted
+  if (Number.isInteger(exam.submittedCount) && exam.submittedCount >= 0) return exam.submittedCount > 0
+  return null
+}
+
+async function loadExamSummary(exam) {
+  const flag = getSubmittedFlag(exam)
+  const [score, history] = await Promise.allSettled([
+    flag === false ? Promise.resolve(null) : getLatestPracticeScore(exam.id),
+    flag === null ? getPracticeHistory(exam.id, 0, 1) : Promise.resolve(null),
+  ])
+  const noHistory = flag === false || (history.status === 'fulfilled' && history.value?.totalElements === 0)
+  return {
+    ...exam,
+    latestScore: score.status === 'fulfilled' ? score.value : null,
+    scoreError: score.status === 'rejected' && !noHistory,
+    hasSubmitted: flag ?? (history.status === 'fulfilled' ? history.value.totalElements > 0 : null),
+    historyError: history.status === 'rejected',
+  }
+}
 
 export function PracticePage() {
   const location = useLocation()
-  const navigate = useNavigate()
   const [exams, setExams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [reviewingExamId, setReviewingExamId] = useState('')
+  const [retry, setRetry] = useState(0)
 
   useEffect(() => {
+    let active = true
     getGeneralExams()
-      .then((items) =>
-        Promise.all(
-          items.map(async (exam) => {
-            try {
-              return { ...exam, latestScore: await getLatestPracticeScore(exam.id) }
-            } catch {
-              return { ...exam, latestScore: null }
-            }
-          }),
-        ),
-      )
-      .then(setExams)
-      .catch((requestError) => setError(getApiErrorMessage(requestError, 'Không thể tải danh sách bài thi. Vui lòng thử lại.')))
-      .finally(() => setLoading(false))
-  }, [])
+      .then((items) => Promise.all(items.map(loadExamSummary)))
+      .then((items) => { if (active) setExams(items) })
+      .catch((requestError) => {
+        if (active) setError(getApiErrorMessage(requestError, 'Không thể tải danh sách bài thi. Vui lòng thử lại.'))
+      })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [retry])
 
-  async function handleReview(exam) {
-    setReviewingExamId(exam.id)
+  function retryLoading() {
     setError('')
-    try {
-      const review = await getLatestPracticeReview(exam.id)
-      const submissionId = review?.submissionId || review?.submission_id
-      if (!submissionId) {
-        throw new Error('API review không trả về submissionId.')
-      }
-
-      sessionStorage.setItem(`exam-result:${submissionId}`, JSON.stringify(review))
-      navigate(`/ket-qua/${submissionId}`, { state: { result: review } })
-    } catch (requestError) {
-      setError(getApiErrorMessage(requestError, 'Không thể tải bài thi gần nhất.'))
-    } finally {
-      setReviewingExamId('')
-    }
+    setLoading(true)
+    setRetry((current) => current + 1)
   }
 
   return (
@@ -66,7 +68,12 @@ export function PracticePage() {
         </p>
       )}
       {loading && <p className="text-slate-500">Đang tải danh sách bài thi...</p>}
-      {error && <p className="rounded-lg bg-red-50 p-4 text-red-600">{error}</p>}
+      {error && (
+        <div className="rounded-lg bg-red-50 p-4 text-red-600" role="alert">
+          <p>{error}</p>
+          <button className="mt-2 font-semibold underline" onClick={retryLoading} type="button">Thử lại</button>
+        </div>
+      )}
       {!loading && !error && exams.length === 0 && (
         <p className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
           Chưa có bài thi nào được phát hành.
@@ -85,18 +92,22 @@ export function PracticePage() {
               {exam.durationMinutes || exam.duration || 0} phút · {exam.totalQuestions || exam.questionCount || 'Nhiều'} câu hỏi
             </p>
             {exam.latestScore && (
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm font-bold text-emerald-600">
-                  Điểm gần nhất: {exam.latestScore.score ?? '—'}
-                </p>
-                <button
-                  className="text-sm font-bold text-cyan-800 underline decoration-cyan-300 underline-offset-4 hover:text-cyan-950 disabled:cursor-wait disabled:opacity-50"
-                  disabled={Boolean(reviewingExamId)}
-                  onClick={() => handleReview(exam)}
-                  type="button"
-                >
-                  {reviewingExamId === exam.id ? 'Đang tải...' : 'Xem lại bài thi gần nhất'}
-                </button>
+              <p className="mt-3 text-sm font-bold text-emerald-600">
+                Điểm gần nhất: {exam.latestScore.score ?? '—'}
+              </p>
+            )}
+            {exam.hasSubmitted === true && (
+              <Link
+                className="mt-3 text-sm font-bold text-cyan-800 underline decoration-cyan-300 underline-offset-4 hover:text-cyan-950"
+                to={`/luyen-de/${encodeURIComponent(exam.id)}/lich-su`}
+              >
+                Xem danh sách bài đã làm
+              </Link>
+            )}
+            {(exam.historyError || exam.scoreError) && (
+              <div className="mt-3 text-sm text-amber-700" role="alert">
+                <p>{exam.historyError ? 'Không thể kiểm tra lịch sử bài làm.' : 'Không thể tải điểm gần nhất.'}</p>
+                <button className="mt-1 font-semibold underline" onClick={retryLoading} type="button">Thử lại</button>
               </div>
             )}
             <Link

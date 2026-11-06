@@ -13,6 +13,7 @@ export function ExamQuestion({
   highlightedContent,
   onContentChange,
   allowHighlight = true,
+  disabled = false,
 }) {
   return (
     <article className="border-b border-slate-200 px-5 py-5 last:border-0" ref={questionRef}>
@@ -28,6 +29,7 @@ export function ExamQuestion({
           aria-label={`Đánh dấu câu ${question.orderIndex}`}
           className={`shrink-0 text-xl ${marked ? 'text-orange-500' : 'text-slate-400 hover:text-slate-700'}`}
           onClick={() => onToggleMark(question.id)}
+          disabled={disabled}
           type="button"
         >
           ⚑
@@ -45,6 +47,7 @@ export function ExamQuestion({
           >
             <input
               checked={answer === option}
+              disabled={disabled}
               className="mt-0.5 h-3.5 w-3.5 accent-blue-700"
               name={question.id}
               onChange={() => onAnswer(question.id, option)}

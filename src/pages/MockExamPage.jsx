@@ -74,7 +74,7 @@ export function MockExamPage() {
   return (
     <div className="mx-auto max-w-7xl px-6 py-16">
       <PageIntro
-        description="Chọn một đề thi thử để làm bài trong thời gian quy định. Bài sẽ tự động nộp khi hết giờ."
+        description="Chọn một đề thi thử để làm bài trong thời gian quy định. Bài tự nộp khi hết giờ nếu trang đang mở và có kết nối; hãy lưu thường xuyên trên thiết bị này."
         eyebrow="Kiểm tra năng lực"
         title="Thi thử"
       />

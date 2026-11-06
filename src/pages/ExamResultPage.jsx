@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { getApiErrorMessage, getExamAnswersRevealed, getSubmissionPartLogs } from '../services/api'
 import { formatInlineText } from '../utils/textFormatting'
+import { formatPracticeSubmissionDate } from '../utils/practiceHistory'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -70,10 +71,10 @@ function groupQuestionsByPart(result) {
     }))
 }
 
-export function ExamResultPage() {
+export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
   const { submissionId } = useParams()
   const location = useLocation()
-  const result = location.state?.result || readStoredResult(submissionId)
+  const result = resultOverride || location.state?.result || readStoredResult(submissionId)
   const [partTimeLogs, setPartTimeLogs] = useState(result?.partTimeLogs || [])
   const [partLogsLoading, setPartLogsLoading] = useState(Boolean(submissionId))
   const [partLogsError, setPartLogsError] = useState('')
@@ -137,7 +138,7 @@ export function ExamResultPage() {
             {result.examTitle || 'Bài luyện đề'}
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Nộp lúc: {formatDate(result.submittedAt)}
+            Nộp lúc: {resultOverride ? formatPracticeSubmissionDate(result.submittedAt) : formatDate(result.submittedAt)}
           </p>
         </div>
         <div className="rounded-2xl bg-slate-900 px-8 py-5 text-center text-white">
@@ -146,6 +147,12 @@ export function ExamResultPage() {
           <p className="text-xs text-slate-400">{percentage}%</p>
         </div>
       </div>
+
+      {location.state?.submissionWarnings?.map((warning) => (
+        <p className="mt-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-800" key={warning}>
+          {warning}
+        </p>
+      ))}
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         <SummaryCard label="Tổng số câu" value={result.totalQuestions ?? 0} />
@@ -206,8 +213,8 @@ export function ExamResultPage() {
         </div>
       </section>
 
-      <Link className="mt-10 inline-flex rounded-lg bg-slate-900 px-5 py-3 font-bold text-white hover:bg-slate-700" to={location.state?.returnTo || '/luyen-de'}>
-        {location.state?.returnTo ? 'Quay lại video' : 'Làm bài khác'}
+      <Link className="mt-10 inline-flex rounded-lg bg-slate-900 px-5 py-3 font-bold text-white hover:bg-slate-700" to={returnTo || location.state?.returnTo || '/luyen-de'}>
+        {returnLabel || (location.state?.returnTo ? 'Quay lại video' : 'Làm bài khác')}
       </Link>
     </div>
   )

@@ -4,6 +4,8 @@ import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { MockExamPage } from './pages/MockExamPage'
 import { PracticePage } from './pages/PracticePage'
+import { PracticeHistoryPage } from './pages/PracticeHistoryPage'
+import { PracticeReviewPage } from './pages/PracticeReviewPage'
 import { ExamTakePage } from './pages/ExamTakePage'
 import { ExamResultPage } from './pages/ExamResultPage'
 import { VocabularyPage } from './pages/VocabularyPage'
@@ -21,6 +23,8 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/luyen-de" element={<PracticePage />} />
           <Route path="/luyen-de/:examId" element={<ExamTakePage />} />
+          <Route path="/luyen-de/:examId/lich-su" element={<PracticeHistoryPage />} />
+          <Route path="/luyen-de/bai-lam/:submissionId" element={<PracticeReviewPage />} />
           <Route path="/ket-qua/:submissionId" element={<ExamResultPage />} />
           <Route path="/thi-thu" element={<MockExamPage />} />
           <Route path="/thi-thu/:examId" element={<ExamTakePage />} />

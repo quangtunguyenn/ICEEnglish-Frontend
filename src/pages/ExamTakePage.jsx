@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useMatch, useNavigate, useParams } from 'react-router-dom'
 import { ExamQuestion } from '../components/ExamQuestion'
 import { PassageViewer } from '../components/PassageViewer'
 import { useExamTimer } from '../hooks/useExamTimer'
 import { getApiErrorMessage, getExam, startExam, submitExam } from '../services/api'
+import { readMockDraft, removeMockDraft, writeMockDraft } from '../utils/mockDraft'
 
 function formatTime(seconds) {
   return `${Math.floor(seconds / 60)
@@ -22,16 +23,43 @@ function getDurationSeconds(exam) {
   return duration > 0 ? duration * 60 : 0
 }
 
+function getCurrentAccountId() {
+  const profile = JSON.parse(localStorage.getItem('currentUser') || 'null')
+  const accountId =
+    profile?.id ||
+    profile?.userId ||
+    profile?.studentId ||
+    profile?.username ||
+    profile?.userName
+
+  return accountId ? String(accountId) : ''
+}
+
+function getPracticeDraftKey(accountId, submissionId) {
+  return `iceenglish:practice-draft:${encodeURIComponent(accountId)}:${encodeURIComponent(String(submissionId))}`
+}
+
+function getPracticeTimerKey(accountId, submissionId) {
+  return `iceenglish:practice-part-times:${encodeURIComponent(accountId)}:${encodeURIComponent(String(submissionId))}`
+}
+
 export function ExamTakePage() {
   const { examId } = useParams()
   const navigate = useNavigate()
+  const isMockRoute = Boolean(useMatch('/thi-thu/:examId'))
   const [exam, setExam] = useState(null)
   const [partIndex, setPartIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [saveStatus, setSaveStatus] = useState(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [timerStorageContext, setTimerStorageContext] = useState(null)
+  const [timerStorageWarning, setTimerStorageWarning] = useState('')
   const [remainingSeconds, setRemainingSeconds] = useState(0)
+  const [mockDraft, setMockDraft] = useState(null)
+  const [mockExpired, setMockExpired] = useState(false)
   const [markedQuestions, setMarkedQuestions] = useState({})
   const [questionPositions, setQuestionPositions] = useState({})
   const [highlightedPassages, setHighlightedPassages] = useState({})
@@ -40,34 +68,42 @@ export function ExamTakePage() {
   const timerDeadlineRef = useRef(null)
   const autoSubmittedRef = useRef(false)
   const fullscreenStartedRef = useRef(false)
+  const answersTouchedRef = useRef(false)
+  const loadRequestRef = useRef(null)
+  const submitInFlightRef = useRef(false)
   const activePart = exam?.parts?.[partIndex]
   const activePartKey = activePart?.id || activePart?.partId || String(partIndex)
   const activeQuestionIndex = questionPositions[activePartKey] ?? 0
   const questionRefs = useRef({})
-  const { getPartTimes, partTimes } = useExamTimer(activePart?.id)
-  const isMock = String(exam?.mode || '').toUpperCase() === 'MOCK'
-  const durationSeconds = getDurationSeconds(exam)
+  const { getPartTimes, partTimes, restorePartTimes } = useExamTimer(activePart?.id)
+  const isMock = isMockRoute || String(exam?.mode || '').toUpperCase() === 'MOCK'
+  const isGeneralExam = !isMock
 
   useEffect(() => {
-    if (!isMock || !durationSeconds) {
-      timerDeadlineRef.current = null
-      return
-    }
-
-    const deadline = Date.now() + durationSeconds * 1000
-    timerDeadlineRef.current = deadline
+    if (!isMock || !mockDraft) return
+    const deadline = mockDraft.deadline
     const updateRemaining = () => {
       setRemainingSeconds(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)))
+      if (Date.now() >= deadline) setMockExpired(true)
     }
 
     updateRemaining()
     const timerId = window.setInterval(updateRemaining, 250)
     return () => window.clearInterval(timerId)
-  }, [isMock, durationSeconds])
+  }, [isMock, mockDraft])
 
   useEffect(() => {
-    startExam(examId)
-      .then((submission) => {
+    let active = true
+    if (!loadRequestRef.current || loadRequestRef.current.examId !== examId || loadRequestRef.current.isMockRoute !== isMockRoute) {
+      const request = (async () => {
+        let accountId
+        let savedMock
+        if (isMockRoute) {
+          accountId = getCurrentAccountId()
+          if (!accountId) throw new Error('Không xác định được tài khoản để lưu hoặc khôi phục lượt thi thử.')
+          savedMock = readMockDraft(localStorage, accountId, examId)
+        }
+        const submission = savedMock ? { submissionId: savedMock.submissionId, mode: 'MOCK' } : await startExam(examId)
         const submissionId =
           submission.submissionId ||
           submission.submission_id ||
@@ -78,19 +114,165 @@ export function ExamTakePage() {
           throw new Error('Backend bắt đầu bài thi nhưng không trả về submissionId.')
         }
 
-        return getExam(examId).then((examDetail) => ({
+        const examDetail = await getExam(examId)
+        const loadedExam = {
           ...submission,
           ...examDetail,
           mode: submission.mode || examDetail.mode,
           submissionId,
-        }))
+        }
+        if (!isMockRoute) return { loadedExam }
+
+        const duration = getDurationSeconds(loadedExam)
+        if (!duration || !Number.isFinite(duration)) throw new Error('Đề thi thử không có thời lượng hợp lệ.')
+        const draft = savedMock || {
+          version: 1,
+          accountId: String(accountId),
+          examId: String(examId),
+          submissionId: String(submissionId),
+          deadline: Date.now() + duration * 1000,
+          answers: {},
+          partTimes: {},
+        }
+        if (!savedMock) writeMockDraft(localStorage, draft)
+        return { loadedExam, draft, restored: Boolean(savedMock) }
+      })()
+      loadRequestRef.current = { examId, isMockRoute, request }
+    }
+
+    loadRequestRef.current.request
+      .then(({ loadedExam, draft, restored }) => {
+        if (!active) return
+        if (draft) {
+          setAnswers(draft.answers)
+          restorePartTimes(draft.partTimes)
+          setMockDraft(draft)
+          timerDeadlineRef.current = draft.deadline
+          setRemainingSeconds(Math.max(0, Math.ceil((draft.deadline - Date.now()) / 1000)))
+          setMockExpired(Date.now() >= draft.deadline)
+          if (restored) setSaveStatus({ error: false, message: 'Đã khôi phục bản lưu thi thử trên máy này.' })
+        }
+        setExam(loadedExam)
       })
-      .then(setExam)
-      .catch((requestError) =>
-        setError(getApiErrorMessage(requestError, 'Không thể bắt đầu bài thi. Vui lòng thử lại.')),
+      .catch((requestError) => {
+        if (active) setError(getApiErrorMessage(requestError, 'Không thể bắt đầu hoặc khôi phục bài thi. Hãy kiểm tra kết nối và bộ nhớ trình duyệt.'))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [examId, isMockRoute, restorePartTimes])
+
+  useEffect(() => {
+    if (!exam || !isGeneralExam || answersTouchedRef.current) return
+
+    try {
+      const accountId = getCurrentAccountId()
+      if (!accountId) {
+        // oxlint-disable-next-line react-hooks/set-state-in-effect
+        setSaveStatus({
+          error: true,
+          message: 'Không xác định được tài khoản; chưa thể khôi phục bản lưu.',
+        })
+        return
+      }
+
+      const submissionId = String(exam.submissionId)
+      const questionIds = new Set(
+        exam.parts.flatMap((part) => part.questions.map((question) => String(question.id))),
       )
-      .finally(() => setLoading(false))
-  }, [examId])
+      const partIds = new Set(
+        exam.parts.map((part) => String(part.id || part.partId)).filter(Boolean),
+      )
+      const savedDraft = localStorage.getItem(getPracticeDraftKey(accountId, submissionId))
+      let restoredAnswerCount = 0
+
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft)
+        if (
+          draft?.version !== 1 ||
+          draft.accountId !== accountId ||
+          String(draft.submissionId) !== submissionId ||
+          !draft.answers ||
+          typeof draft.answers !== 'object' ||
+          Array.isArray(draft.answers)
+        ) {
+          setSaveStatus({
+            error: true,
+            message: 'Bản lưu đáp án trên máy không hợp lệ nên chưa được khôi phục.',
+          })
+        } else {
+          const restoredAnswers = Object.fromEntries(
+            Object.entries(draft.answers).filter(
+              ([questionId, answer]) =>
+                questionIds.has(questionId) && ['A', 'B', 'C', 'D'].includes(answer),
+            ),
+          )
+          restoredAnswerCount = Object.keys(restoredAnswers).length
+          setAnswers(restoredAnswers)
+          setHasUnsavedChanges(false)
+        }
+      }
+
+      let restoredTimes = {}
+      const savedTimerData = localStorage.getItem(getPracticeTimerKey(accountId, submissionId))
+      if (savedTimerData) {
+        const timerSnapshot = JSON.parse(savedTimerData)
+        if (
+          timerSnapshot?.version === 1 &&
+          timerSnapshot.accountId === accountId &&
+          String(timerSnapshot.submissionId) === submissionId &&
+          timerSnapshot.partTimes &&
+          typeof timerSnapshot.partTimes === 'object' &&
+          !Array.isArray(timerSnapshot.partTimes)
+        ) {
+          restoredTimes = Object.fromEntries(
+            Object.entries(timerSnapshot.partTimes).filter(
+              ([partId, seconds]) =>
+                partIds.has(partId) &&
+                Number.isFinite(seconds) &&
+                seconds >= 0,
+            ),
+          )
+        }
+      }
+      restorePartTimes(restoredTimes)
+      setTimerStorageContext({ accountId, submissionId })
+      if (savedDraft && restoredAnswerCount > 0) {
+        setSaveStatus({
+          error: false,
+          message: `Đã khôi phục ${restoredAnswerCount} câu trả lời từ bản lưu trên máy.`,
+        })
+      }
+    } catch {
+      setTimerStorageWarning('Không thể đọc hoặc khôi phục dữ liệu trên máy; thời gian Part chưa được khôi phục.')
+    }
+  }, [exam, isGeneralExam, restorePartTimes])
+
+  useEffect(() => {
+    if (!isGeneralExam || !timerStorageContext) return
+
+    try {
+      localStorage.setItem(
+        getPracticeTimerKey(timerStorageContext.accountId, timerStorageContext.submissionId),
+        JSON.stringify({
+          version: 1,
+          ...timerStorageContext,
+          partTimes,
+          savedAt: new Date().toISOString(),
+        }),
+      )
+      if (timerStorageWarning) {
+        // oxlint-disable-next-line react-hooks/set-state-in-effect
+        setTimerStorageWarning('')
+      }
+    } catch {
+      if (!timerStorageWarning) {
+        // oxlint-disable-next-line react-hooks/set-state-in-effect
+        setTimerStorageWarning('Không tự lưu được thời gian Part trên máy; hãy kiểm tra dung lượng hoặc quyền lưu trữ.')
+      }
+    }
+  }, [isGeneralExam, partTimes, timerStorageContext, timerStorageWarning])
 
   const questionCount = useMemo(
     () => exam?.parts?.reduce((total, part) => total + part.questions.length, 0) || 0,
@@ -156,7 +338,82 @@ export function ExamTakePage() {
   }
 
   function chooseAnswer(questionId, selectedOpt) {
+    if (submitting || (isMock && (!mockDraft || Date.now() >= mockDraft.deadline))) return
+    answersTouchedRef.current = true
     setAnswers((current) => ({ ...current, [questionId]: selectedOpt }))
+    setHasUnsavedChanges(true)
+  }
+
+  function handleSaveDraft() {
+    if (isMock) {
+      if (!mockDraft || Date.now() >= mockDraft.deadline || submitting) return
+      try {
+        if (getCurrentAccountId() !== mockDraft.accountId) {
+          throw new Error('Tài khoản hiện tại đã thay đổi; không thể lưu lượt thi này.')
+        }
+        const snapshot = { ...mockDraft, answers, partTimes: getPartTimes(), savedAt: new Date().toISOString() }
+        writeMockDraft(localStorage, snapshot)
+        setMockDraft(snapshot)
+        setHasUnsavedChanges(false)
+        setSaveStatus({ error: false, message: 'Đã lưu trên trình duyệt này; đáp án không được đồng bộ lên server.' })
+      } catch (saveError) {
+        setSaveStatus({
+          error: true,
+          message: getApiErrorMessage(saveError, 'Không lưu được trên máy. Hãy kiểm tra bộ nhớ trình duyệt.'),
+        })
+      }
+      return
+    }
+
+    const finalPartTimes = getPartTimes()
+    try {
+      const accountId = getCurrentAccountId()
+      if (!accountId) {
+        setSaveStatus({
+          error: true,
+          message: 'Không xác định được tài khoản; chưa lưu được bài làm.',
+        })
+        return
+      }
+
+      localStorage.setItem(
+        getPracticeDraftKey(accountId, exam.submissionId),
+        JSON.stringify({
+          version: 1,
+          accountId,
+          submissionId: String(exam.submissionId),
+          examId: String(examId),
+          answers,
+          partTimes: finalPartTimes,
+          savedAt: new Date().toISOString(),
+        }),
+      )
+      setHasUnsavedChanges(false)
+      setSaveStatus({
+        error: false,
+        message: 'Đã lưu đáp án và thời gian trên trình duyệt này.',
+      })
+      try {
+        localStorage.setItem(
+          getPracticeTimerKey(accountId, exam.submissionId),
+          JSON.stringify({
+            version: 1,
+            accountId,
+            submissionId: String(exam.submissionId),
+            partTimes: finalPartTimes,
+            savedAt: new Date().toISOString(),
+          }),
+        )
+        setTimerStorageContext({ accountId, submissionId: String(exam.submissionId) })
+      } catch {
+        setTimerStorageWarning('Đáp án đã lưu, nhưng không lưu được thời gian Part trên máy.')
+      }
+    } catch {
+      setSaveStatus({
+        error: true,
+        message: 'Không lưu được trên máy. Bộ nhớ có thể bị từ chối hoặc đã hết dung lượng.',
+      })
+    }
   }
 
   function toggleMark(questionId) {
@@ -193,7 +450,19 @@ export function ExamTakePage() {
   }
 
   const handleSubmit = useCallback(async () => {
-    if (submitting) return
+    if (submitInFlightRef.current) return
+    if (isMock) {
+      try {
+        if (!mockDraft || getCurrentAccountId() !== mockDraft.accountId) {
+          setError('Tài khoản hiện tại đã thay đổi; không thể nộp lượt thi này.')
+          return
+        }
+      } catch {
+        setError('Không thể xác minh tài khoản trên trình duyệt; chưa thể nộp bài.')
+        return
+      }
+    }
+    submitInFlightRef.current = true
     setSubmitting(true)
     setError('')
     const finalPartTimes = getPartTimes()
@@ -210,29 +479,63 @@ export function ExamTakePage() {
       exam_id: exam.examId || exam.exam_id || exam.id,
     }
 
+    let result
     try {
-      const result = await submitExam(payload)
-      sessionStorage.setItem(`exam-result:${result.submissionId}`, JSON.stringify(result))
-      navigate(`/ket-qua/${result.submissionId}`, { state: { result } })
+      result = await submitExam(payload)
     } catch (requestError) {
-      setError(getApiErrorMessage(requestError, 'Nộp bài thất bại. Vui lòng kiểm tra kết nối và thử lại.'))
+      setError(`${getApiErrorMessage(requestError, 'Không thể xác nhận nộp bài.')} Bản lưu trên máy được giữ lại; hãy kiểm tra kết quả hoặc thử nộp lại.`)
+      submitInFlightRef.current = false
       setSubmitting(false)
+      return
     }
-  }, [answers, exam, getPartTimes, navigate, submitting])
+
+    const submissionWarnings = []
+    if (isGeneralExam) {
+      try {
+        const accountId = getCurrentAccountId()
+        if (accountId) {
+          localStorage.removeItem(getPracticeDraftKey(accountId, exam.submissionId))
+          localStorage.removeItem(getPracticeTimerKey(accountId, exam.submissionId))
+        }
+      } catch {
+        submissionWarnings.push('Đã nộp bài nhưng không thể xóa toàn bộ dữ liệu lưu trên máy.')
+      }
+    } else if (mockDraft) {
+      try {
+        removeMockDraft(localStorage, mockDraft.accountId, mockDraft.examId)
+      } catch {
+        submissionWarnings.push('Đã nộp bài nhưng không thể xóa bản lưu thi thử trên máy.')
+      }
+    }
+
+    try {
+      sessionStorage.setItem(`exam-result:${result.submissionId}`, JSON.stringify(result))
+    } catch {
+      submissionWarnings.push('Không thể lưu kết quả trong phiên trình duyệt; hãy giữ trang kết quả mở.')
+    }
+    navigate(`/ket-qua/${result.submissionId}`, { state: { result, submissionWarnings } })
+  }, [answers, exam, getPartTimes, isGeneralExam, isMock, mockDraft, navigate])
 
   useEffect(() => {
     if (
       !isMock ||
-      !durationSeconds ||
+      !exam ||
+      !mockDraft ||
       !timerDeadlineRef.current ||
       Date.now() < timerDeadlineRef.current ||
       remainingSeconds > 0 ||
-      autoSubmittedRef.current ||
-      submitting
+      autoSubmittedRef.current
     ) return
     autoSubmittedRef.current = true
     handleSubmit()
-  }, [handleSubmit, durationSeconds, isMock, remainingSeconds, submitting])
+  }, [exam, handleSubmit, isMock, mockDraft, remainingSeconds])
+
+  useEffect(() => {
+    if (!isMock || !mockExpired) return
+    const retryOnReconnect = () => handleSubmit()
+    window.addEventListener('online', retryOnReconnect)
+    return () => window.removeEventListener('online', retryOnReconnect)
+  }, [handleSubmit, isMock, mockExpired])
 
   if (loading) return <div className="p-12 text-center text-slate-600">Đang tải bài thi...</div>
   if (error && !exam) return <div className="p-12 text-center text-red-600">{error}</div>
@@ -265,12 +568,56 @@ export function ExamTakePage() {
           <span className={`font-mono font-bold ${isMock && remainingSeconds < 60 ? 'text-red-600' : 'text-slate-700'}`}>
             {isMock ? formatTime(remainingSeconds) : formatTime(partTimes[activePart.id] || 0)}
           </span>
-          <button className="rounded bg-blue-500 px-4 py-1.5 font-semibold text-white hover:bg-blue-600" onClick={handleSubmit} type="button">
+          <button
+            className="rounded bg-blue-500 px-4 py-1.5 font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+            disabled={submitting || (isMock && mockExpired)}
+            onClick={handleSaveDraft}
+            type="button"
+          >
             Lưu
+          </button>
+          <button
+            className="rounded bg-emerald-700 px-4 py-1.5 font-semibold text-white hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-50"
+            disabled={submitting}
+            onClick={handleSubmit}
+            type="button"
+          >
+            {submitting ? 'Đang nộp...' : isMock && mockExpired ? 'Thử nộp lại' : 'Nộp bài'}
           </button>
           <span className="text-lg text-slate-500">⊟ ⊞ ▤</span>
         </div>
       </header>
+      {(isGeneralExam || isMock) && (
+        <div className="shrink-0 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs">
+          <p className="text-slate-600">
+            Bản lưu chỉ có trên trình duyệt và thiết bị này; dữ liệu có thể mất nếu xóa dữ liệu trình duyệt hoặc đổi thiết bị.
+            {hasUnsavedChanges && <span className="ml-1 font-semibold text-amber-700">Có thay đổi chưa lưu.</span>}
+          </p>
+          {isMock && (
+            <p className="mt-1 text-slate-600">
+              Hãy bấm Lưu thường xuyên. Đồng hồ chạy cả khi đóng tab và dựa vào giờ trên máy, không được server xác thực.
+              Khi hết giờ, bài chỉ được nộp khi trang đang mở và có kết nối; nếu quay lại, chỉ bản đã lưu mới được khôi phục.
+              Không mở cùng lượt thi trong nhiều tab hoặc thiết bị.
+            </p>
+          )}
+          {isMock && mockExpired && (
+            <p className="mt-1 font-semibold text-red-700" role="status">
+              Đã hết giờ. Không thể tiếp tục làm bài; nếu chưa nộp được, hãy kết nối mạng và thử nộp lại.
+            </p>
+          )}
+          {saveStatus && (
+            <p aria-live="polite" className={`mt-1 ${saveStatus.error ? 'text-red-600' : 'text-emerald-700'}`} role="status">
+              {saveStatus.message}
+            </p>
+          )}
+          {timerStorageWarning && (
+            <p aria-live="polite" className="mt-1 text-amber-700" role="status">
+              {timerStorageWarning}
+            </p>
+          )}
+          {isMock && error && <p className="mt-1 text-red-700" role="alert">{error}</p>}
+        </div>
+      )}
       <main className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-slate-300 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:divide-x lg:divide-y-0">
         <PassageViewer
           allowHighlight={!isMock}
@@ -290,6 +637,7 @@ export function ExamTakePage() {
             <ExamQuestion
               allowHighlight={!isMock}
               answer={answers[question.id]}
+              disabled={submitting || (isMock && mockExpired)}
               key={question.id}
               marked={markedQuestions[question.id]}
               onAnswer={chooseAnswer}
@@ -336,9 +684,9 @@ export function ExamTakePage() {
             </button>
           </span>
         ))}
-        {error && <p className="col-span-full text-xs text-red-600">{error}</p>}
+        {!isMock && error && <p className="col-span-full text-xs text-red-600">{error}</p>}
       </footer>
-      {(!hasEnteredFullscreen || securityWarning) && (
+      {(!isMock || !mockExpired) && (!hasEnteredFullscreen || securityWarning) && (
         <div
           aria-modal="true"
           className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/75 p-6 backdrop-blur-sm"
