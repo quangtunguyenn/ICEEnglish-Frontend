@@ -4,6 +4,7 @@ import { ExamQuestion } from '../components/ExamQuestion'
 import { PassageViewer } from '../components/PassageViewer'
 import { useExamTimer } from '../hooks/useExamTimer'
 import { getApiErrorMessage, getExam, startExam, submitExam } from '../services/api'
+import { applyDisplayNumbers } from '../utils/examNumbering'
 import { readMockDraft, removeMockDraft, writeMockDraft } from '../utils/mockDraft'
 
 function formatTime(seconds) {
@@ -114,10 +115,12 @@ export function ExamTakePage() {
           throw new Error('Backend bắt đầu bài thi nhưng không trả về submissionId.')
         }
 
-        const examDetail = await getExam(examId)
+        // submissionId makes the backend return parts in this attempt's saved (possibly shuffled) order.
+        const examDetail = await getExam(examId, submissionId)
         const loadedExam = {
           ...submission,
           ...examDetail,
+          parts: applyDisplayNumbers(examDetail.parts),
           mode: submission.mode || examDetail.mode,
           submissionId,
         }

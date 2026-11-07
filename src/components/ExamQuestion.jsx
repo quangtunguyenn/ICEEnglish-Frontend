@@ -21,12 +21,12 @@ export function ExamQuestion({
         <HighlightableContent
           allowHighlight={allowHighlight}
           className="min-w-0 text-[13px] font-semibold leading-6 text-slate-800"
-          content={questionToHtml(question.orderIndex, question.content)}
+          content={questionToHtml(question.displayNumber ?? question.orderIndex, question.content)}
           onContentChange={(content) => onContentChange(content, 'stem')}
           savedContent={highlightedContent?.stem}
         />
         <button
-          aria-label={`Đánh dấu câu ${question.orderIndex}`}
+          aria-label={`Đánh dấu câu ${question.displayNumber ?? question.orderIndex}`}
           className={`shrink-0 text-xl ${marked ? 'text-orange-500' : 'text-slate-400 hover:text-slate-700'}`}
           onClick={() => onToggleMark(question.id)}
           disabled={disabled}

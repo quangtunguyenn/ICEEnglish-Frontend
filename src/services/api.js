@@ -157,8 +157,10 @@ export async function getMockExams() {
   )
 }
 
-export async function getExam(examId) {
-  const { data } = await api.get(`/api/v1/exams/${examId}`)
+export async function getExam(examId, submissionId) {
+  const { data } = await api.get(`/api/v1/exams/${examId}`, {
+    params: submissionId ? { submissionId } : {},
+  })
   return data.data || data
 }
 

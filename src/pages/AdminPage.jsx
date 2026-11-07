@@ -13,6 +13,7 @@ import {
   toggleExamAnswersRevealed,
   uploadLearningBundle,
 } from '../services/api'
+import { formatInlineText, questionToHtml, textToHtml } from '../utils/textFormatting'
 
 const navigation = [
   { id: 'overview', label: 'Tổng quan', icon: '01' },
@@ -529,26 +530,94 @@ function ExamsSection({
   )
 }
 
+const previewOptions = ['A', 'B', 'C', 'D']
+
+function Rich({ className = '', html }) {
+  return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
+}
+
 function ExamPreview({ preview }) {
   const exam = preview.exam || preview
-  const parts = preview.parts || exam.parts || []
+  const parts = [...(preview.parts || exam.parts || [])].sort(
+    (first, second) => (first.orderIndex ?? 0) - (second.orderIndex ?? 0),
+  )
+  const questionTotal = parts.reduce((sum, part) => sum + (part.questions || []).length, 0)
+  const duration = exam.durationMinutes ?? exam.duration_minutes
 
   return (
     <div className="mt-6 border-t border-slate-200 pt-5">
       <h2 className="text-lg font-extrabold text-slate-900">{getExamTitle(exam)}</h2>
-      <p className="mt-1 text-xs text-slate-500">Preview dành cho staff, bao gồm đáp án và lời giải.</p>
-      <div className="mt-4 space-y-5">
+      <p className="mt-1 text-xs text-slate-500">
+        Preview dành cho staff: toàn bộ đề theo thứ tự gốc, kèm đáp án và lời giải.
+      </p>
+      <dl className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+        <span className="rounded bg-slate-200 px-2 py-1">{parts.length} part</span>
+        <span className="rounded bg-slate-200 px-2 py-1">{questionTotal} câu</span>
+        {exam.examType && <span className="rounded bg-slate-200 px-2 py-1">{exam.examType}</span>}
+        {exam.status && <span className="rounded bg-slate-200 px-2 py-1">{exam.status}</span>}
+        {duration > 0 && <span className="rounded bg-slate-200 px-2 py-1">{duration} phút</span>}
+        <span className="rounded bg-slate-200 px-2 py-1">
+          {exam.shuffleParts ? 'Trộn part: bật' : 'Trộn part: tắt'}
+        </span>
+      </dl>
+      <div className="mt-4 space-y-6">
         {parts.map((part, partIndex) => (
-          <section className="border-t border-slate-200 pt-4" key={part.id || part.partId || partIndex}>
-            <h3 className="font-bold text-slate-800">{part.partName || part.part_name || `Part ${partIndex + 1}`}</h3>
-            <div className="mt-3 space-y-3">
-              {(part.questions || []).map((question, questionIndex) => (
-                <article className="rounded-lg bg-white p-4" key={question.id || question.questionId || questionIndex}>
-                  <p className="text-sm font-semibold text-slate-800">{question.orderIndex || question.order_index || questionIndex + 1}. {question.content}</p>
-                  <p className="mt-2 text-sm font-bold text-emerald-700">Đáp án: {question.correctOpt || question.correctOption || question.correct_option || '—'}</p>
-                  {question.explanation && <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{question.explanation}</p>}
-                </article>
-              ))}
+          <section className="rounded-xl border border-slate-200 bg-white" key={part.id || part.partId || partIndex}>
+            <header className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
+              <h3 className="font-bold text-slate-800">{part.partName || part.part_name || `Part ${partIndex + 1}`}</h3>
+              {part.partType && <span className="rounded bg-cyan-100 px-2 py-0.5 text-[11px] font-bold text-cyan-800">{part.partType}</span>}
+              {part.fixedPosition && <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">Cố định vị trí</span>}
+              {part.shuffleGroup && <span className="rounded bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-800">Nhóm: {part.shuffleGroup}</span>}
+            </header>
+            {part.passageText && (
+              <div className={`border-b border-slate-200 p-4 ${part.translate ? 'grid gap-4 lg:grid-cols-2' : ''}`}>
+                <Rich
+                  className="text-[13px] leading-6 text-slate-700 [&_h2]:mb-3 [&_h2]:text-center [&_h2]:font-bold [&_h2]:uppercase [&_p]:mb-3"
+                  html={textToHtml(part.passageText)}
+                />
+                {part.translate && (
+                  <Rich
+                    className="text-[13px] leading-6 text-slate-600 lg:border-l lg:border-slate-200 lg:pl-4 [&_p]:mb-3"
+                    html={textToHtml(part.translate)}
+                  />
+                )}
+              </div>
+            )}
+            <div className="divide-y divide-slate-100">
+              {(part.questions || []).map((question, questionIndex) => {
+                const correct = question.correctOpt || question.correctOption || question.correct_option
+                const number = question.orderIndex || question.order_index || questionIndex + 1
+                const videoId = question.relatedVideoId || question.related_video_id
+                return (
+                  <article className="p-4" key={question.id || question.questionId || questionIndex}>
+                    <Rich className="text-sm font-semibold text-slate-800 [&_p]:mb-2" html={questionToHtml(number, question.content)} />
+                    <ul className="mt-2 grid gap-1.5">
+                      {previewOptions.map((key) => {
+                        const text = question[`opt${key}`]
+                        if (text == null || text === '') return null
+                        const isCorrect = correct === key
+                        return (
+                          <li
+                            className={`rounded-md border px-3 py-1.5 text-[13px] ${isCorrect ? 'border-emerald-300 bg-emerald-50 font-semibold text-emerald-900' : 'border-slate-200 text-slate-700'}`}
+                            key={key}
+                          >
+                            <strong>{key}.</strong> <span dangerouslySetInnerHTML={{ __html: formatInlineText(text) }} />
+                            {isCorrect && <span className="ml-2 text-xs font-bold">✓ Đáp án đúng</span>}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    {!correct && <p className="mt-2 text-sm font-bold text-red-600">Chưa có đáp án đúng.</p>}
+                    {question.explanation && (
+                      <Rich
+                        className="mt-2 rounded-md bg-slate-50 p-3 text-[13px] leading-6 text-slate-600"
+                        html={formatInlineText(question.explanation).replace(/\n/g, '<br>')}
+                      />
+                    )}
+                    {videoId && <p className="mt-2 break-all font-mono text-[11px] text-slate-500">Video ôn tập: {videoId}</p>}
+                  </article>
+                )
+              })}
             </div>
           </section>
         ))}

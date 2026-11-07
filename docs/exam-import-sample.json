@@ -3,7 +3,8 @@
     "title": "Đề mẫu - Định dạng import",
     "exam_type": "MOCK",
     "duration_minutes": 50,
-    "is_answers_revealed": false
+    "is_answers_revealed": false,
+    "shuffle_parts": true
   },
   "parts": [
     {

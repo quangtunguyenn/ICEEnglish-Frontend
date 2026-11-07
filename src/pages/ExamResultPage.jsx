@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { getApiErrorMessage, getExamAnswersRevealed, getSubmissionPartLogs } from '../services/api'
+import { buildNumberMap, renumberText } from '../utils/examNumbering'
 import { formatInlineText, questionToHtml, textToHtml } from '../utils/textFormatting'
 import { formatPracticeSubmissionDate } from '../utils/practiceHistory'
 
@@ -35,8 +36,9 @@ function groupQuestionsByPart(result) {
   const translations = new Map(
     (result?.partTranslations || []).map((part) => [part.partId, part]),
   )
+  const partPosition = (part) => part.displayIndex ?? part.orderIndex ?? 0
   const parts = [...(result?.parts || [])].sort(
-    (first, second) => (first.orderIndex ?? 0) - (second.orderIndex ?? 0),
+    (first, second) => partPosition(first) - partPosition(second),
   )
   const groups = new Map(parts.map((part) => [part.partId, {
     key: part.partId,
@@ -63,12 +65,21 @@ function groupQuestionsByPart(result) {
 
   return [...groups.values()]
     .filter((group) => group.questions.length > 0)
-    .map((group) => ({
-      ...group,
-      questions: [...group.questions].sort(
-        (first, second) => (first.orderIndex ?? 0) - (second.orderIndex ?? 0),
-      ),
-    }))
+    .map((group) => {
+      const map = buildNumberMap(group.questions)
+      return {
+        ...group,
+        name: renumberText(group.name, map),
+        passageText: renumberText(group.passageText, map),
+        questions: [...group.questions]
+          .sort((first, second) => (first.orderIndex ?? 0) - (second.orderIndex ?? 0))
+          .map((question) => ({
+            ...question,
+            content: renumberText(question.content, map),
+            explanation: renumberText(question.explanation, map),
+          })),
+      }
+    })
 }
 
 export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
@@ -167,7 +178,9 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
           <p className="mt-4 rounded-lg bg-red-50 p-4 text-sm text-red-600">{partLogsError}</p>
         )}
         <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {partTimeLogs.map((part) => (
+          {[...partTimeLogs]
+            .sort((first, second) => (first.displayIndex ?? 0) - (second.displayIndex ?? 0))
+            .map((part) => (
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" key={part.partId}>
               <p className="font-bold text-slate-900">{part.partName || 'Part'}</p>
               <p className="mt-2 text-2xl font-extrabold text-cyan-600">
@@ -266,7 +279,7 @@ function QuestionResult({ question, showAnswer, showVideo = true }) {
         <div
           className="font-bold text-slate-900"
           dangerouslySetInnerHTML={{
-            __html: questionToHtml(question.orderIndex, question.content, 'Câu'),
+            __html: questionToHtml(question.displayNumber ?? question.orderIndex, question.content, 'Câu'),
           }}
         />
         {showAnswer && (

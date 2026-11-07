@@ -1,0 +1,504 @@
+{
+  "exam": {
+    "title": "Ôn thi giữa HKI – Đề số 3 - Chuẩn bị cho kì thi THPT QG & ĐGNL 2027 - Thầy Thiện (40 câu)",
+    "exam_type": "MOCK",
+    "duration_minutes": 50,
+    "is_answers_revealed": false
+  },
+  "parts": [
+    {
+      "part_name": "Part 1: Personal Development (Questions 1-6)",
+      "part_type": "CLOZE_TEST",
+      "passage_text": "***Read the following advertisement and mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks.***\n\n<p align=\"center\"><b>PERSONAL DEVELOPMENT</b></p>\n\nThe term \"personal development\" is often connected (1) __________ activities like dieting or exercise, or perhaps learning a (2) __________. But while these things are undoubtedly important, there are other worthwhile skills (3) __________. Academic or cognitive skills such as critical thinking, memorization and creativity are important, as are social and emotional skills like friendliness, positive thinking and self-esteem. Other skills not to be neglected include self-control, (4) __________ time, and finding a (5) __________ life. The important thing is to take a \"holistic approach\" to personal development, meaning you should aim (6) __________ yourself as a whole person rather than focusing on the one aspect of yourself at the expense of the others.",
+      "recommended_time_seconds": 240,
+      "order_index": 1,
+      "questions": [
+        {
+          "order_index": 1,
+          "content": "**Question 1. Choose the correct option to fill in blank (1).**",
+          "opt_a": "with",
+          "opt_b": "for",
+          "opt_c": "on",
+          "opt_d": "in",
+          "correct_opt": "A",
+          "explanation": "Cụm từ **be connected with sth**: có liên quan đến cái gì.",
+          "related_video_id": "bcec4409-1d27-48f0-97e5-333659adb924"
+        },
+        {
+          "order_index": 2,
+          "content": "**Question 2. Choose the correct option to fill in blank (2).**",
+          "opt_a": "new program computer",
+          "opt_b": "new computer program",
+          "opt_c": "computer new program",
+          "opt_d": "program new computer",
+          "correct_opt": "B",
+          "explanation": "Trật tự từ trong tính từ/danh từ ghép: *new* (tính từ) + *computer program* (danh từ ghép).",
+          "related_video_id": "a71b4b9f-7e24-42cc-af2e-7ec345abf1f0"
+        },
+        {
+          "order_index": 3,
+          "content": "**Question 3. Choose the correct option to fill in blank (3).**",
+          "opt_a": "are overlooked",
+          "opt_b": "which overlook",
+          "opt_c": "overlooking",
+          "opt_d": "overlooked",
+          "correct_opt": "D",
+          "explanation": "Rút gọn mệnh đề quan hệ dạng bị động: *worthwhile skills (which are) overlooked* -> *overlooked*.",
+          "related_video_id": "72cc5a96-e00f-4794-95c3-0f2983ee7d07"
+        },
+        {
+          "order_index": 4,
+          "content": "**Question 4. Choose the correct option to fill in blank (4).**",
+          "opt_a": "exchanging",
+          "opt_b": "managing",
+          "opt_c": "avoiding",
+          "opt_d": "encouraging",
+          "correct_opt": "B",
+          "explanation": "Cụm từ **managing time**: quản lý thời gian.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 5,
+          "content": "**Question 5. Choose the correct option to fill in blank (5).**",
+          "opt_a": "satisfyingly",
+          "opt_b": "satisfy",
+          "opt_c": "satisfied",
+          "opt_d": "satisfying",
+          "correct_opt": "D",
+          "explanation": "Cần một tính từ đứng trước danh từ *life*. *Satisfying life*: một cuộc sống thỏa nguyện/hài lòng.",
+          "related_video_id": "a71b4b9f-7e24-42cc-af2e-7ec345abf1f0"
+        },
+        {
+          "order_index": 6,
+          "content": "**Question 6. Choose the correct option to fill in blank (6).**",
+          "opt_a": "to developing",
+          "opt_b": "develop",
+          "opt_c": "developing",
+          "opt_d": "to develop",
+          "correct_opt": "D",
+          "explanation": "Cấu trúc **aim to do sth**: mục tiêu làm gì.",
+          "related_video_id": "13a34c19-12de-4aa0-b1d2-b599562ab392"
+        }
+      ]
+    },
+    {
+      "part_name": "Part 2: University Entrance Mock Exam Leaflet (Questions 7-12)",
+      "part_type": "CLOZE_TEST",
+      "passage_text": "***Read the following leaflet and mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks.***\n\nStudents born in 2007 have just received the university entrance mock exam issued by the Ministry of Education. The exam, which is reportedly shorter and more difficult than previous years, has left many (7) __________ feeling anxious. The questions are mainly focused on reading comprehension and vocabulary, requiring students to (8) __________ complex words and phrases.\n\nTeachers have acknowledged that this is a (9) __________ exam, but they believe it has the potential to accurately classify students based on their abilities. (10) __________ the increased difficulty, the exam is considered fair and capable of assessing the students' true competencies.\n\nDespite the pressure, the (11) __________ of students sitting for the exam remains high. With a focus on reading comprehension, the exam is expected to test the (12) __________ of students' preparedness for the university entrance process.",
+      "recommended_time_seconds": 240,
+      "order_index": 2,
+      "questions": [
+        {
+          "order_index": 7,
+          "content": "**Question 7. Choose the correct option to fill in blank (7).**",
+          "opt_a": "neither",
+          "opt_b": "others",
+          "opt_c": "other",
+          "opt_d": "the other",
+          "correct_opt": "B",
+          "explanation": "*others* làm đại từ chỉ những người khác (ở đây là các học sinh khác).",
+          "related_video_id": "7d045983-a827-4cc9-9a02-f7e17fa9a12c"
+        },
+        {
+          "order_index": 8,
+          "content": "**Question 8. Choose the correct option to fill in blank (8).**",
+          "opt_a": "figure out",
+          "opt_b": "look for",
+          "opt_c": "take in",
+          "opt_d": "give up",
+          "correct_opt": "A",
+          "explanation": "Phrasal verb **figure out**: hiểu ra / giải quyết / suy luận ra.",
+          "related_video_id": "2db256c9-f1fa-4878-b3f4-ccb2385cc8ab"
+        },
+        {
+          "order_index": 9,
+          "content": "**Question 9. Choose the correct option to fill in blank (9).**",
+          "opt_a": "challenging",
+          "opt_b": "relaxing",
+          "opt_c": "simple",
+          "opt_d": "boring",
+          "correct_opt": "A",
+          "explanation": "*challenging*: đầy thách thức, khó khăn (phù hợp ngữ cảnh đề thi khó).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 10,
+          "content": "**Question 10. Choose the correct option to fill in blank (10).**",
+          "opt_a": "Instead of",
+          "opt_b": "On account of",
+          "opt_c": "Irrespective of",
+          "opt_d": "In view of",
+          "correct_opt": "C",
+          "explanation": "**Irrespective of**: Bất chấp / Không kể đến (bất chấp độ khó tăng lên, đề vẫn được xem là công bằng).",
+          "related_video_id": "09f8db0e-b51a-4481-baf0-fb47cbb77336"
+        },
+        {
+          "order_index": 11,
+          "content": "**Question 11. Choose the correct option to fill in blank (11).**",
+          "opt_a": "number",
+          "opt_b": "amount",
+          "opt_c": "quantity",
+          "opt_d": "level",
+          "correct_opt": "A",
+          "explanation": "Cụm **the number of + N đếm được số nhiều**: số lượng (học sinh).",
+          "related_video_id": "7d045983-a827-4cc9-9a02-f7e17fa9a12c"
+        },
+        {
+          "order_index": 12,
+          "content": "**Question 12. Choose the correct option to fill in blank (12).**",
+          "opt_a": "chance",
+          "opt_b": "entropy",
+          "opt_c": "depth",
+          "opt_d": "randomness",
+          "correct_opt": "C",
+          "explanation": "**depth of preparedness**: chiều sâu của sự chuẩn bị.",
+          "related_video_id": null
+        }
+      ]
+    },
+    {
+      "part_name": "Part 3: Sentence & Paragraph Rearrangement (Questions 13-17)",
+      "part_type": "ARRANGEMENT",
+      "passage_text": "***Mark the letter A, B, C, or D on your answer sheet to indicate the correct arrangement of the sentence to make a meaningful paragraph/letter in each of the following questions.***",
+      "recommended_time_seconds": 300,
+      "order_index": 3,
+      "questions": [
+        {
+          "order_index": 13,
+          "content": "**Question 13.**\n\na. Thuy: They will have green energy and less traffic.\n\nb. Tuan: What does he say about them?\n\nc. Thuy: My brother studies how to build future eco-cities.",
+          "opt_a": "c – b – a",
+          "opt_b": "b – a – c",
+          "opt_c": "a – c – b",
+          "opt_d": "b – c – a",
+          "correct_opt": "A",
+          "explanation": "Thủy giới thiệu về anh trai (c) -> Tuấn hỏi anh trai nói gì (b) -> Thủy trả lời (a).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 14,
+          "content": "**Question 14.**\n\na. Phong: I read an article about cities getting too crowded.\n\nb. Linh: But then the cities need more schools, hospitals, and clean places to live.\n\nc. Linh: Yes, it's hard to find space to live or even walk sometimes.\n\nd. Phong: Urban life must improve for both the people and the environment.\n\ne. Phong: Many people move to cities for better jobs.",
+          "opt_a": "a – d – b – e – c",
+          "opt_b": "a – b – e – c – d",
+          "opt_c": "a – b – e – d – c",
+          "opt_d": "a – c – e – b – d",
+          "correct_opt": "D",
+          "explanation": "Phong nêu chủ đề thành phố đông đúc (a) -> Linh đồng ý (c) -> Phong giải thích lý do người dân chuyển lên (e) -> Linh bổ sung hệ lụy (b) -> Phong kết luận giải pháp (d).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 15,
+          "content": "**Question 15.**\n\nHi Sarah,\n\na. I'm really looking forward to joining the cooking class you recommended.\n\nb. Also, I appreciate the recipe you sent me; it looks delicious!\n\nc. However, I'm quite busy this month, so I might not be able to attend all the sessions.\n\nd. Thanks for your help in finding that class — it sounds perfect for me.\n\ne. Let's try to cook together sometime, that would be fun!\n\nWrite back soon.\n\nJames",
+          "opt_a": "a – b – c – d – e",
+          "opt_b": "d – a – c – b – e",
+          "opt_c": "b – d – a – c – e",
+          "opt_d": "c – a – e – b – d",
+          "correct_opt": "B",
+          "explanation": "Cảm ơn vì đã tìm lớp (d) -> Hào hứng tham gia (a) -> Nêu khó khăn bận rộn (c) -> Cảm ơn công thức (b) -> Đề xuất nấu ăn chung (e).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 16,
+          "content": "**Question 16.**\n\na. In addition, consuming fast food that is high in sugar can result in dry skin and acne breakouts.\n\nb. First of all, the high levels of unhealthy fats present in fast food contribute to weight gain and increase the risk of diseases such as heart disease and high blood pressure.\n\nc. Fast food has become popular around the world. However, eating too much fast food causes many negative effects on health.\n\nd. Next, fast food often lacks essential nutrients, leading to nutritional deficiencies.\n\ne. In summary, while fast food offers convenience, it also poses significant risks including weight gain, disease, nutrient deficiencies, and skin problems.",
+          "opt_a": "c – b – d – a – e",
+          "opt_b": "c – a – b – d – e",
+          "opt_c": "b – c – d – a – e",
+          "opt_d": "c – d – a – b – e",
+          "correct_opt": "A",
+          "explanation": "Câu mở đầu tổng quan (c) -> Ý 1: First of all (b) -> Ý 2: Next (d) -> Ý 3: In addition (a) -> Tóm lại: In summary (e).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 17,
+          "content": "**Question 17.**\n\na. However, this rapid development has also brought challenges, including environmental and traffic concerns.\n\nb. Over the last few years, Greenfield has seen remarkable growth in its infrastructure and population.\n\nc. The transformation has led to new residential areas, schools, and parks, significantly improving the quality of life for residents.\n\nd. Also, this growth has attracted various businesses, ranging from cafes to tech startups, fostering a vibrant local economy.\n\ne. For example, Greenfield still faces issues such as a lack of public transportation options.",
+          "opt_a": "b – c – d – e – a",
+          "opt_b": "b – c – d – a – e",
+          "opt_c": "b – d – e – c – a",
+          "opt_d": "a – b – c – d – e",
+          "correct_opt": "B",
+          "explanation": "Giới thiệu sự phát triển Greenfield (b) -> Sự thay đổi hạ tầng (c) -> Phát triển kinh tế (d) -> Mặt trái/thách thức (a) -> Ví dụ về thách thức (e).",
+          "related_video_id": null
+        }
+      ]
+    },
+    {
+      "part_name": "Part 4: Tipping in Japan and the US (Questions 18-22)",
+      "part_type": "FILLIN_CLOZE",
+      "passage_text": "***Read the following passage and mark the letter A, B, C, D on your answer sheet to choose the option that fits each of the following numbered blanks from 18 to 22.***\n\n<p align=\"center\"><b>TIPPING IN JAPAN AND THE UNITED STATES</b></p>\n\nTipping is handled very differently in Japan and the United States, which can confuse visitors. In Japan, tipping is not part of the culture. When receiving good service, (18) ________. The service given is considered part of the job, so no tip is expected. (19) _______. In some places, it may even be seen as rude. For people not used to this custom, avoiding tipping in Japan is important to show respect for the culture.\nIn the United States, tipping is a normal part of the service industry. (20) ________, using a taxi, or staying at a hotel, leaving a tip is expected. Tipping, which is usually between 15% and 20%, is a way for workers to make extra income. Service workers often rely on tips to earn a living. (21) ______ where it is common may upset the staff or cause confusion.\nUnderstanding these differences helps visitors avoid mistakes and shows that they respect local customs. By following the tipping practices in Japan and the United States, (22) _______.",
+      "recommended_time_seconds": 420,
+      "order_index": 4,
+      "questions": [
+        {
+          "order_index": 18,
+          "content": "**Question 18. Choose the correct phrase to complete blank (18) in the passage.**",
+          "opt_a": "people do not leave extra money",
+          "opt_b": "people leave extra money to show respect",
+          "opt_c": "tips are always appreciated",
+          "opt_d": "people leave a small gift",
+          "correct_opt": "A",
+          "explanation": "Ở Nhật không có văn hóa tip -> *people do not leave extra money*.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 19,
+          "content": "**Question 19. Choose the correct sentence to complete blank (19) in the passage.**",
+          "opt_a": "In addition, people offer large tips to impress people around them",
+          "opt_b": "In fact, tipping could make the staff feel awkward or uncomfortable",
+          "opt_c": "However, tipping is an important part of the job",
+          "opt_d": "Therefore, the fewer tips are given, the better the service is offered",
+          "correct_opt": "B",
+          "explanation": "Thực tế, việc đưa tiền tip có thể khiến nhân viên cảm thấy ngượng ngùng hoặc khó chịu.",
+          "related_video_id": "09f8db0e-b51a-4481-baf0-fb47cbb77336"
+        },
+        {
+          "order_index": 20,
+          "content": "**Question 20. Choose the correct phrase to complete blank (20) in the passage.**",
+          "opt_a": "After finishing a meal",
+          "opt_b": "When receiving poor service",
+          "opt_c": "When eating at a restaurant",
+          "opt_d": "Before paying the bill",
+          "correct_opt": "C",
+          "explanation": "Cụm liệt kê các tình huống dịch vụ ở Mỹ: *When eating at a restaurant, using a taxi, or staying at a hotel...*",
+          "related_video_id": "79ec797b-24c1-4d03-9835-a9415a079643"
+        },
+        {
+          "order_index": 21,
+          "content": "**Question 21. Choose the correct phrase to complete blank (21) in the passage.**",
+          "opt_a": "Tipping too little",
+          "opt_b": "Not tipping in situations",
+          "opt_c": "Offering no tip",
+          "opt_d": "Forgetting to ask for the bill",
+          "correct_opt": "B",
+          "explanation": "*Not tipping in situations where it is common*: Không tip trong các tình huống phổ biến có thể làm nhân viên phật lòng.",
+          "related_video_id": "13a34c19-12de-4aa0-b1d2-b599562ab392"
+        },
+        {
+          "order_index": 22,
+          "content": "**Question 22. Choose the correct clause to complete blank (22) in the passage.**",
+          "opt_a": "travelers can ensure a more positive experience during their stay in each country",
+          "opt_b": "travelers can feel more at ease knowing how much to tip in different situations",
+          "opt_c": "service workers will be fairly compensated by receiving appropriate tips",
+          "opt_d": "visitors can avoid unnecessary expenses while respecting local customs",
+          "correct_opt": "A",
+          "explanation": "Bằng cách tuân theo tập quán tip -> *du khách có thể đảm bảo trải nghiệm tích cực hơn.*",
+          "related_video_id": null
+        }
+      ]
+    },
+    {
+      "part_name": "Part 5: Green Living (Questions 23-30)",
+      "part_type": "READING_8",
+      "passage_text": "***Read the following passage about green living and mark the letter A, B, C or D on your answer sheet to indicate the best answer to each of the following questions from 23 to 30.***\n\nGreen living refers to a lifestyle that promotes sustainability and environmental consciousness. This way of life encourages individuals to make choices that reduce their carbon footprint and conserve natural resources. Practices such as recycling, using renewable energy sources, and reducing waste are fundamental aspects of green living. By adopting these practices, individuals can contribute to the preservation of the environment and promote a healthier planet for future generations.\n\nOne significant component of green living is the use of **<u>renewable</u>** energy sources. Solar, wind, and hydroelectric power are examples of renewable energy that can replace fossil fuels. Using renewable energy reduces greenhouse gas emissions and dependence on non-renewable resources. Additionally, renewable energy sources are often more sustainable and have less impact on the environment.\n\nAnother important aspect of green living is sustainable consumption. This involves choosing products that are environmentally friendly and responsibly sourced. For example, buying locally produced food reduces the carbon footprint associated with transportation. Moreover, opting for products made from recycled materials helps **<u>conserve</u>** resources and reduce waste.\n\n**<u>Green living also emphasizes the importance of conserving water and energy. Simple actions such as turning off lights when not in use, fixing leaks, and using energy-efficient appliances can significantly reduce energy and water consumption.</u>** These practices not only benefit the environment but also save money on utility bills.\n\nEducation and awareness play a crucial role in promoting green living. By educating individuals about the benefits of sustainable practices and how to implement **<u>them</u>**, communities can foster a culture of environmental responsibility. Awareness campaigns, workshops, and educational programs are effective ways to encourage people to adopt green living practices.",
+      "recommended_time_seconds": 600,
+      "order_index": 5,
+      "questions": [
+        {
+          "order_index": 23,
+          "content": "**Question 23. Which of the following is NOT mentioned as a practice of green living?**",
+          "opt_a": "Recycling",
+          "opt_b": "Using renewable energy",
+          "opt_c": "Reducing waste",
+          "opt_d": "Driving more",
+          "correct_opt": "D",
+          "explanation": "Các đáp án A, B, C đều có trong đoạn 1. 'Driving more' không được đề cập.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 24,
+          "content": "**Question 24. The word \"renewable\" in paragraph 2 is CLOSEST in meaning to __________.**",
+          "opt_a": "finite",
+          "opt_b": "endless",
+          "opt_c": "temporary",
+          "opt_d": "limited",
+          "correct_opt": "B",
+          "explanation": "*renewable* (tái tạo được) gần nghĩa nhất với *endless* (vô tận / không cạn kiệt).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 25,
+          "content": "**Question 25. The word \"them\" in paragraph 5 refers to __________.**",
+          "opt_a": "sustainable practices",
+          "opt_b": "non-renewable resources",
+          "opt_c": "renewable energy sources",
+          "opt_d": "greenhouse gas emissions",
+          "correct_opt": "A",
+          "explanation": "Từ 'them' thay thế cho danh từ số nhiều 'sustainable practices' ở mệnh đề phía trước.",
+          "related_video_id": "75bf6c12-d607-487a-bff5-1eb328cb6ae2"
+        },
+        {
+          "order_index": 26,
+          "content": "**Question 26. The word \"conserve\" in paragraph 3 could be best replaced by __________.**",
+          "opt_a": "save",
+          "opt_b": "waste",
+          "opt_c": "deplete",
+          "opt_d": "increase",
+          "correct_opt": "A",
+          "explanation": "*conserve* (bảo tồn, tiết kiệm) = *save*.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 27,
+          "content": "**Question 27. Which of the following best paraphrases the underlined sentence in paragraph 4?**",
+          "opt_a": "Conserving water and energy is not important.",
+          "opt_b": "Simple actions can lead to significant reductions in consumption.",
+          "opt_c": "Turning off lights has no impact on energy consumption.",
+          "opt_d": "Fixing leaks is the only way to conserve water.",
+          "correct_opt": "B",
+          "explanation": "Sentence gốc: 'Simple actions... can significantly reduce energy and water consumption' -> Paraphrase thành 'Simple actions can lead to significant reductions in consumption'.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 28,
+          "content": "**Question 28. Which of the following is TRUE according to the passage?**",
+          "opt_a": "Renewable energy sources are less sustainable than fossil fuels.",
+          "opt_b": "Sustainable consumption involves choosing environmentally friendly products.",
+          "opt_c": "Green living does not emphasize water conservation.",
+          "opt_d": "Education has no role in promoting green living.",
+          "correct_opt": "B",
+          "explanation": "Đoạn 3 có viết: 'This involves choosing products that are environmentally friendly...'",
+          "related_video_id": null
+        },
+        {
+          "order_index": 29,
+          "content": "**Question 29. In which paragraph does the writer mention the economic benefits of green living practices?**",
+          "opt_a": "Paragraph 1",
+          "opt_b": "Paragraph 2",
+          "opt_c": "Paragraph 3",
+          "opt_d": "Paragraph 4",
+          "correct_opt": "D",
+          "explanation": "Đoạn 4 đề cập đến lợi ích kinh tế: '...save money on utility bills'.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 30,
+          "content": "**Question 30. In which paragraph does the writer explore the role of education in green living?**",
+          "opt_a": "Paragraph 1",
+          "opt_b": "Paragraph 2",
+          "opt_c": "Paragraph 3",
+          "opt_d": "Paragraph 5",
+          "correct_opt": "D",
+          "explanation": "Đoạn 5 mở đầu bằng: 'Education and awareness play a crucial role...'",
+          "related_video_id": null
+        }
+      ]
+    },
+    {
+      "part_name": "Part 6: Impact of Social Media on Mental Health (Questions 31-40)",
+      "part_type": "READING_10",
+      "passage_text": "***Read the following passage about the impact of social media on mental health and mark the letter A, B, C, or D on your answer sheet to indicate the best answer to each of the following questions from 31 to 40.***\n\n[I] In recent years, social media platforms have become a central part of daily life, offering users countless ways to connect, share, and communicate. [II] While these platforms offer many advantages, experts have noted rising concerns about their effects on mental health. [III] Studies reveal that excessive social media use can contribute to feelings of anxiety, depression, and loneliness, despite its intention to promote connection and social interaction (Twenge & Campbell, 2019). [IV]\n\nA primary reason for these mental health concerns is the tendency for social media users to compare themselves to others. Platforms like Instagram and Facebook often highlight idealized lifestyles, leading users to feel inadequate about their own lives. Additionally, the constant notifications and messages contribute to a **<u>\"fear of missing out\"</u>** or FOMO, which keeps individuals in a cycle of checking their phones, often reducing the quality of sleep and overall well-being.\n\nThere is also a growing body of research suggesting a link between social media use and decreased attention spans. When users frequently switch between apps and notifications, **<u>their</u>** ability to focus for extended periods may diminish (Rosen, 2019). This shift in attention can interfere with productivity, especially in academic and professional settings, where sustained focus is essential.\n\n**<u>Addressing these challenges requires a multi-faceted approach.</u>** Some mental health professionals suggest limiting screen time and setting boundaries, such as “device-free” hours before bedtime. Others recommend engaging in offline activities, like reading or exercising, to reduce dependence on social media and build healthier habits. According to psychologists, such strategies can **<u>enhance</u>** mental resilience and allow for more meaningful, balanced relationships (Robinson & Smith, 2020).",
+      "recommended_time_seconds": 900,
+      "order_index": 6,
+      "questions": [
+        {
+          "order_index": 31,
+          "content": "**Question 31. Where in paragraph 1 does the following sentence best fit?**\n“Young people are particularly affected due to their high engagement with these platforms.”",
+          "opt_a": "[I]",
+          "opt_b": "[II]",
+          "opt_c": "[III]",
+          "opt_d": "[IV]",
+          "correct_opt": "D",
+          "explanation": "Vị trí [IV] ở cuối đoạn 1 là thích hợp nhất để bổ sung thêm đối tượng bị ảnh hưởng nặng nề (giới trẻ).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 32,
+          "content": "**Question 32. The phrase \"fear of missing out\" in paragraph 2 could be best replaced by __________.**",
+          "opt_a": "longing to interact",
+          "opt_b": "desire to know",
+          "opt_c": "worry of exclusion",
+          "opt_d": "aim of satisfaction",
+          "correct_opt": "C",
+          "explanation": "FOMO (fear of missing out) = *worry of exclusion* (nỗi lo bị bỏ rơi/lo không thuộc về nhóm).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 33,
+          "content": "**Question 33. The word \"their\" in paragraph 3 refers to __________.**",
+          "opt_a": "users",
+          "opt_b": "researchers",
+          "opt_c": "notifications",
+          "opt_d": "professionals",
+          "correct_opt": "A",
+          "explanation": "'their ability' đề cập tới khả năng tập trung của *users* (người dùng).",
+          "related_video_id": "75bf6c12-d607-487a-bff5-1eb328cb6ae2"
+        },
+        {
+          "order_index": 34,
+          "content": "**Question 34. According to paragraph 2, which of the following is NOT an effect of social media on mental health?**",
+          "opt_a": "improved self-esteem",
+          "opt_b": "increased anxiety",
+          "opt_c": "fear of missing out",
+          "opt_d": "sleep disruption",
+          "correct_opt": "A",
+          "explanation": "Nạn nhân cảm thấy 'inadequate' (kém cỏi) chứ không phải 'improved self-esteem' (tăng tự trọng).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 35,
+          "content": "**Question 35. Which of the following best summarizes paragraph 3?**",
+          "opt_a": "Social media contributes to concentration issues that affect users’ academic achievements.",
+          "opt_b": "Notifications and app-switching harm the focus needed in professional environments.",
+          "opt_c": "Frequent notifications on social media can decrease users' attention spans and productivity.",
+          "opt_d": "Distractions from social media only affect students’ performance negatively.",
+          "correct_opt": "C",
+          "explanation": "Đoạn 3 nói về việc chuyển đổi ứng dụng và thông báo liên tục làm giảm khoảng chú ý (attention span) và năng suất làm việc.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 36,
+          "content": "**Question 36. The word \"enhance\" in paragraph 4 is OPPOSITE in meaning to _____.**",
+          "opt_a": "diminish",
+          "opt_b": "reinforce",
+          "opt_c": "intensify",
+          "opt_d": "appreciate",
+          "correct_opt": "A",
+          "explanation": "*enhance* (nâng cao/tăng cường) >< *diminish* (giảm đi/suy giảm).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 37,
+          "content": "**Question 37. Which of the following is TRUE according to the passage?**",
+          "opt_a": "Notifications have a minor impact on users’ attention spans.",
+          "opt_b": "Offline activities can help improve mental health by limiting social media use.",
+          "opt_c": "Social media’s primary effect is fostering productivity and interaction.",
+          "opt_d": "Screen time restrictions are not necessary for mental health.",
+          "correct_opt": "B",
+          "explanation": "Đoạn 4 nêu: 'engaging in offline activities... to reduce dependence on social media and build healthier habits'.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 38,
+          "content": "**Question 38. Which of the following best paraphrases the underlined sentence in paragraph 4?**",
+          "opt_a": "A balanced approach is required to mitigate the harmful impacts of social media.",
+          "opt_b": "Mental health professionals are solely responsible for regulating social media use.",
+          "opt_c": "With consistent screen time, individuals can build healthier online habits.",
+          "opt_d": "Dependence on social media requires a combination of therapeutic techniques.",
+          "correct_opt": "A",
+          "explanation": "Paraphrase câu 'Addressing these challenges requires a multi-faceted approach' -> 'A balanced approach is required to mitigate...'.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 39,
+          "content": "**Question 39. Which of the following can be inferred from the passage?**",
+          "opt_a": "Social media platforms generally have a positive influence on young users.",
+          "opt_b": "Social media-related anxiety is often temporary and not very impactful.",
+          "opt_c": "Balanced social media usage, along with offline activities, can reduce stress.",
+          "opt_d": "FOMO and lack of attention are uncommon issues among young users.",
+          "correct_opt": "C",
+          "explanation": "Suy luận từ đoạn cuối: kết hợp sử dụng điều độ và hoạt động offline sẽ nâng cao sức khỏe tinh thần.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 40,
+          "content": "**Question 40. Which of the following best summarizes the passage?**",
+          "opt_a": "Social media, despite its benefits, presents mental health risks like anxiety and distraction, particularly among young users, and managing screen time can mitigate these effects.",
+          "opt_b": "The use of social media helps improve relationships and communication but reduces the attention spans of its users.",
+          "opt_c": "Social media is harmful to all users, causing loneliness and detachment, and must be restricted in all settings.",
+          "opt_d": "Platforms like Instagram and Facebook serve as effective tools for social bonding, minimizing the effects of anxiety and low self-esteem.",
+          "correct_opt": "A",
+          "explanation": "Tóm tắt chính xác toàn bộ bài viết: Mặc dù có lợi ích, MXH mang lại rủi ro sức khỏe tâm thần và việc quản lý thời gian dùng màn hình sẽ làm giảm tác hại.",
+          "related_video_id": null
+        }
+      ]
+    }
+  ]
+}

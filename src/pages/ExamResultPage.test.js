@@ -91,6 +91,33 @@ test('groups questions by part with passage, four options and selected answer, h
   assert.doesNotMatch(html, /Secret explanation|Đáp án đúng/)
 })
 
+test('orders parts by displayIndex so shuffled attempts keep their saved part order', () => {
+  const result = {
+    examId: 1,
+    parts: [
+      { partId: 'p1', orderIndex: 1, displayIndex: 2, partName: 'Part 1', passageText: 'First passage' },
+      { partId: 'p2', orderIndex: 2, displayIndex: 1, partName: 'Part 2', passageText: 'Second passage' },
+    ],
+    details: [
+      { questionId: 'q1', partId: 'p1', orderIndex: 1, content: 'Q1', optA: 'a1', optB: 'b1', optC: 'c1', optD: 'd1' },
+      { questionId: 'q2', partId: 'p2', orderIndex: 2, content: 'Q2', optA: 'a2', optB: 'b2', optC: 'c2', optD: 'd2' },
+    ],
+  }
+  const html = renderToStaticMarkup(
+    createElement(
+      MemoryRouter,
+      { initialEntries: [{ pathname: '/ket-qua/1', state: { result } }] },
+      createElement(Routes, null,
+        createElement(Route, { path: '/ket-qua/:submissionId', element: createElement(ExamResultPage) }),
+      ),
+    ),
+  )
+
+  assert.ok(html.indexOf('Second passage') < html.indexOf('First passage'))
+  assert.match(html, /Câu 1\./)
+  assert.match(html, /Câu 2\./)
+})
+
 test('latest practice review displays the returned video title while hiding answers', () => {
   const html = renderResult([{
     content: 'Choose the correct option to fill in blank (1).',

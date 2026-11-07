@@ -1,0 +1,110 @@
+{
+  "exam": {
+    "title": "Ôn thi giữa HKI – Đề mẫu MOCK",
+    "exam_type": "MOCK",
+    "duration_minutes": 50,
+    "is_answers_revealed": false,
+    "shuffle_parts": true
+  },
+  "parts": [
+    {
+      "part_name": "Part 1: Personal Development (Questions 1-2)",
+      "part_type": "CLOZE_TEST",
+      "passage_text": "***Read the following advertisement and mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks.***\n\n# PERSONAL DEVELOPMENT\n\nThe term \"personal development\" is often connected (1) __________ activities like dieting or exercise, or perhaps learning a (2) __________.",
+      "recommended_time_seconds": 240,
+      "order_index": 1,
+      "fixed_position": false,
+      "shuffle_group": null,
+      "questions": [
+        {
+          "order_index": 1,
+          "content": "**Question 1. Choose the correct option to fill in blank (1).**",
+          "opt_a": "with",
+          "opt_b": "for",
+          "opt_c": "on",
+          "opt_d": "in",
+          "correct_opt": "A",
+          "explanation": "Cụm từ **be connected with sth**: có liên quan đến cái gì.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 2,
+          "content": "**Question 2. Choose the correct option to fill in blank (2).**",
+          "opt_a": "new program computer",
+          "opt_b": "new computer program",
+          "opt_c": "computer new program",
+          "opt_d": "program new computer",
+          "correct_opt": "B",
+          "explanation": "Trật tự từ: *new* (tính từ) + *computer program* (danh từ ghép).",
+          "related_video_id": null
+        }
+      ]
+    },
+    {
+      "part_name": "Part 2: Sentence & Paragraph Rearrangement (Questions 3-4)",
+      "part_type": "ARRANGEMENT",
+      "passage_text": "***Mark the letter A, B, C, or D on your answer sheet to indicate the correct arrangement of the sentence to make a meaningful paragraph/letter in each of the following questions.***",
+      "recommended_time_seconds": 300,
+      "order_index": 2,
+      "fixed_position": false,
+      "shuffle_group": null,
+      "questions": [
+        {
+          "order_index": 3,
+          "content": "**Question 3.**\n\na. Thuy: They will have green energy and less traffic.\n\nb. Tuan: What does he say about them?\n\nc. Thuy: My brother studies how to build future eco-cities.",
+          "opt_a": "c – b – a",
+          "opt_b": "b – a – c",
+          "opt_c": "a – c – b",
+          "opt_d": "b – c – a",
+          "correct_opt": "A",
+          "explanation": "Thủy giới thiệu anh trai (c) -> Tuấn hỏi (b) -> Thủy trả lời (a).",
+          "related_video_id": null
+        },
+        {
+          "order_index": 4,
+          "content": "**Question 4.**\n\na. In addition, consuming fast food that is high in sugar can result in dry skin and acne breakouts.\n\nb. First of all, the high levels of unhealthy fats present in fast food contribute to weight gain and increase the risk of diseases such as heart disease and high blood pressure.\n\nc. Fast food has become popular around the world. However, eating too much fast food causes many negative effects on health.\n\nd. Next, fast food often lacks essential nutrients, leading to nutritional deficiencies.\n\ne. In summary, while fast food offers convenience, it also poses significant risks.",
+          "opt_a": "c – b – d – a – e",
+          "opt_b": "c – a – b – d – e",
+          "opt_c": "b – c – d – a – e",
+          "opt_d": "c – d – a – b – e",
+          "correct_opt": "A",
+          "explanation": "c (mở bài) -> b -> d -> a -> e (kết luận).",
+          "related_video_id": null
+        }
+      ]
+    },
+    {
+      "part_name": "Part 3: Tipping in Japan and the US (Questions 5-6)",
+      "part_type": "FILLIN_CLOZE",
+      "passage_text": "***Read the following passage and mark the letter A, B, C, D on your answer sheet to choose the option that fits each of the following numbered blanks from 5 to 6.***\n\n# TIPPING IN JAPAN AND THE UNITED STATES\n\nIn Japan, tipping is not part of the culture. When receiving good service, (5) ________. The service given is considered part of the job, so no tip is expected.\n\nIn the United States, tipping is a normal part of the service industry. (6) ________, using a taxi, or staying at a hotel, leaving a tip is expected.",
+      "recommended_time_seconds": 300,
+      "order_index": 3,
+      "fixed_position": false,
+      "shuffle_group": null,
+      "questions": [
+        {
+          "order_index": 5,
+          "content": "**Question 5. Choose the correct phrase to complete blank (5) in the passage.**",
+          "opt_a": "people do not leave extra money",
+          "opt_b": "people leave extra money to show respect",
+          "opt_c": "tips are always appreciated",
+          "opt_d": "people leave a small gift",
+          "correct_opt": "A",
+          "explanation": "Ở Nhật không có văn hóa tip -> *people do not leave extra money*.",
+          "related_video_id": null
+        },
+        {
+          "order_index": 6,
+          "content": "**Question 6. Choose the correct phrase to complete blank (6) in the passage.**",
+          "opt_a": "Whether eating at a restaurant",
+          "opt_b": "Eat at a restaurant",
+          "opt_c": "When eating at a restaurant",
+          "opt_d": "To eat at a restaurant",
+          "correct_opt": "C",
+          "explanation": "Cần mệnh đề trạng ngữ chỉ thời gian song song với *using a taxi, or staying at a hotel*: **When eating at a restaurant**.",
+          "related_video_id": null
+        }
+      ]
+    }
+  ]
+}
