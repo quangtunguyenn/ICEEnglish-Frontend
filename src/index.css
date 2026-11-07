@@ -261,6 +261,18 @@ html:has(.landing-page) {
   color: #172033;
 }
 
+.exam-passage-editor h2 {
+  margin: 0 0 1rem;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.exam-passage-editor p {
+  margin: 0 0 0.75rem;
+}
+
 .exam-passage-editor u {
   text-decoration: underline;
   text-underline-offset: 2px;

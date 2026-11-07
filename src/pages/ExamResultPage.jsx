@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { getApiErrorMessage, getExamAnswersRevealed, getSubmissionPartLogs } from '../services/api'
-import { formatInlineText } from '../utils/textFormatting'
+import { formatInlineText, questionToHtml, textToHtml } from '../utils/textFormatting'
 import { formatPracticeSubmissionDate } from '../utils/practiceHistory'
 
 function formatDate(value) {
@@ -235,7 +235,10 @@ function PartPassage({ part }) {
       <div className={part.translate ? 'grid gap-5 lg:grid-cols-2' : ''}>
         <div>
           <h4 className="text-sm font-bold text-cyan-700">{part.translate ? 'Nguyên văn' : 'Bài đọc'}</h4>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{part.passageText}</p>
+          <div
+            className="mt-2 text-sm leading-7 text-slate-700 [&_h2]:text-center [&_h2]:font-bold [&_h2]:uppercase [&_p]:mb-3"
+            dangerouslySetInnerHTML={{ __html: textToHtml(part.passageText) }}
+          />
         </div>
         {part.translate && (
           <div>
@@ -260,10 +263,10 @@ function QuestionResult({ question, showAnswer, showVideo = true }) {
   return (
     <article className={`rounded-xl border bg-white p-5 shadow-sm ${showAnswer ? (isCorrect ? 'border-emerald-200' : 'border-red-200') : 'border-slate-200'}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p
+        <div
           className="font-bold text-slate-900"
           dangerouslySetInnerHTML={{
-            __html: `Câu ${question.orderIndex}. ${formatInlineText(question.content)}`,
+            __html: questionToHtml(question.orderIndex, question.content, 'Câu'),
           }}
         />
         {showAnswer && (

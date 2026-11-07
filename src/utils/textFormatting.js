@@ -17,9 +17,30 @@ export function formatInlineText(value) {
   return html
 }
 
+const centeredTitlePattern = /^<p\s+align=["']center["']>\s*(?:<b>|<strong>)?([\s\S]*?)(?:<\/b>|<\/strong>)?\s*<\/p>$/i
+
+// "# TITLE" (or legacy <p align="center"><b>TITLE</b></p>) becomes a centered, bold, uppercase heading.
+function getTitleText(paragraph) {
+  const trimmed = paragraph.trim()
+  if (trimmed.startsWith('# ')) return trimmed.slice(2).trim()
+  return trimmed.match(centeredTitlePattern)?.[1]?.trim() ?? null
+}
+
 export function textToHtml(value) {
   return String(value || '')
     .split(/\n{2,}/)
-    .map((paragraph) => `<p>${formatInlineText(paragraph).replace(/\n/g, '<br>')}</p>`)
+    .filter((paragraph) => paragraph.trim())
+    .map((paragraph) => {
+      const title = getTitleText(paragraph)
+      if (title !== null) return `<h2>${formatInlineText(title)}</h2>`
+      return `<p>${formatInlineText(paragraph).replace(/\n/g, '<br>')}</p>`
+    })
     .join('')
+}
+
+// Adds the "Question N." prefix only when the content does not already start with one.
+export function questionToHtml(orderIndex, content, label = 'Question') {
+  const text = String(content ?? '')
+  if (/^[\s*_]*(?:Question|Câu)\s*\d+/i.test(text)) return textToHtml(text)
+  return textToHtml(`${label} ${orderIndex}. ${text}`)
 }

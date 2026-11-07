@@ -1,5 +1,5 @@
 import { HighlightableContent } from './PassageViewer'
-import { formatInlineText } from '../utils/textFormatting'
+import { formatInlineText, questionToHtml } from '../utils/textFormatting'
 
 const options = ['A', 'B', 'C', 'D']
 
@@ -21,7 +21,7 @@ export function ExamQuestion({
         <HighlightableContent
           allowHighlight={allowHighlight}
           className="min-w-0 text-[13px] font-semibold leading-6 text-slate-800"
-          content={`<p>Question ${question.orderIndex}. ${formatInlineText(question.content)}</p>`}
+          content={questionToHtml(question.orderIndex, question.content)}
           onContentChange={(content) => onContentChange(content, 'stem')}
           savedContent={highlightedContent?.stem}
         />
