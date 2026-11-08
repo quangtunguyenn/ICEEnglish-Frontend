@@ -15,6 +15,7 @@ import {
   uploadLearningBundle,
 } from '../services/api'
 import { MockStatsSection } from '../components/MockStatsSection'
+import { ReadingAdminSection } from '../components/ReadingAdminSection'
 import { formatInlineText, questionToHtml, textToHtml } from '../utils/textFormatting'
 
 const navigation = [
@@ -23,6 +24,7 @@ const navigation = [
   { id: 'exams', label: 'Quản lý đề thi', icon: '03' },
   { id: 'mockStats', label: 'Thống kê thi thử', icon: '05' },
   { id: 'students', label: 'Tài khoản học sinh', icon: '04', adminOnly: true },
+  { id: 'reading', label: 'Quản lý bài đọc', icon: '06', adminOnly: true },
 ]
 
 function readStoredProfile() {
@@ -327,6 +329,7 @@ export function AdminPage() {
             />
           )}
           {activeSection === 'mockStats' && <MockStatsSection />}
+          {activeSection === 'reading' && isAdmin && <ReadingAdminSection />}
           {activeSection === 'students' && isAdmin && (
             <StudentsSection
               busy={busy}

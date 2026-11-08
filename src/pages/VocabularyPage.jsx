@@ -9,6 +9,8 @@ import {
   getVideoVocabularies,
 } from '../services/api'
 import { sortVideoTitles } from '../utils/videoTitles'
+import { normalizeVideoVocabularies } from '../utils/videoVocabulary'
+import { VocabularyFlashcard } from '../components/VocabularyFlashcard'
 
 const EMPTY_VOCABULARIES = []
 
@@ -20,18 +22,6 @@ function getVideoTitle(video) {
   return typeof video === 'string'
     ? video
     : video?.title || video?.videoTitle || video?.video_title || ''
-}
-
-function normalizeVocabulary(items) {
-  if (!Array.isArray(items)) return []
-
-  return items
-    .map((item, index) => {
-      const word = String(item.word || item.term || item.vocabulary || '').trim()
-      const meaning = String(item.meaning || item.definition || item.translation || '').trim()
-      return { id: String(item.id || `${word}-${index}`), word, meaning }
-    })
-    .filter((item) => item.word && item.meaning)
 }
 
 function shuffleItems(items) {
@@ -65,7 +55,7 @@ export function VocabularyPage() {
   const [selectedVideoId, setSelectedVideoId] = useState(location.state?.videoId || '')
   const [selectedVideoTitle, setSelectedVideoTitle] = useState(location.state?.title || '')
   const [vocabularies, setVocabularies] = useState(() =>
-    normalizeVocabulary(location.state?.vocabularies),
+    normalizeVideoVocabularies(location.state?.vocabularies),
   )
   const [vocabulariesLoading, setVocabulariesLoading] = useState(false)
   const [vocabulariesError, setVocabulariesError] = useState('')
@@ -131,7 +121,7 @@ export function VocabularyPage() {
         ? await getGuestVideoVocabularies(videoId)
         : await getVideoVocabularies(videoId)
       if (requestId !== vocabularyRequestId.current) return
-      setVocabularies(normalizeVocabulary(items))
+      setVocabularies(normalizeVideoVocabularies(items))
     } catch (requestError) {
       if (requestId === vocabularyRequestId.current) {
         setVocabularies([])
@@ -256,32 +246,11 @@ export function VocabularyPage() {
 
               {mode === 'flip' ? (
                 <div className="mt-3">
-                  <button
-                    aria-label={isFlipped ? 'Hiện từ tiếng Anh' : 'Hiện nghĩa tiếng Việt'}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm outline-none transition hover:border-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-600"
-                    onClick={() => setIsFlipped((flipped) => !flipped)}
-                    type="button"
-                  >
-                    <span
-                      className="relative block min-h-80 transition-transform duration-500 motion-reduce:transition-none"
-                      style={{ transform: `rotateY(${isFlipped ? 180 : 0}deg)`, transformStyle: 'preserve-3d' }}
-                    >
-                      <span
-                        className="absolute inset-0 grid place-content-center gap-5 rounded-lg bg-slate-950 px-6 py-10 text-center text-white"
-                        style={{ backfaceVisibility: 'hidden' }}
-                      >
-                        <span className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">English</span>
-                        <span className="wrap-break-word text-4xl font-black">{currentVocabulary.word}</span>
-                      </span>
-                      <span
-                        className="absolute inset-0 grid place-content-center gap-5 rounded-lg bg-emerald-700 px-6 py-10 text-center text-white"
-                        style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-                      >
-                        <span className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-100">Tiếng Việt</span>
-                        <span className="wrap-break-word text-3xl font-extrabold">{currentVocabulary.meaning}</span>
-                      </span>
-                    </span>
-                  </button>
+                  <VocabularyFlashcard
+                    isFlipped={isFlipped}
+                    onFlip={() => setIsFlipped((flipped) => !flipped)}
+                    vocabulary={currentVocabulary}
+                  />
                   <p className="mt-3 text-center text-xs font-semibold text-slate-500">
                     {isFlipped ? 'Tiếng Việt' : 'Tiếng Anh'}
                   </p>

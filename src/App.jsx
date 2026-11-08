@@ -13,6 +13,7 @@ import { VocabularyPage } from './pages/VocabularyPage'
 import { VideosPage } from './pages/VideosPage'
 import { HomeworkPage } from './pages/HomeworkPage'
 import { AdminPage } from './pages/AdminPage'
+import { ReadingListPage, ReadingDetailPage, ReadingVocabularyPage } from './pages/ReadingPage'
 import { useGuestMode } from './hooks/useGuestMode'
 
 function App() {
@@ -33,6 +34,9 @@ function App() {
           <Route path="/video" element={<VideosPage />} />
           <Route path="/video/:videoId/homework" element={<HomeworkPage />} />
           <Route path="/tu-vung" element={<VocabularyPage />} />
+          <Route path="/doc-hieu" element={<ReadingListPage />} />
+          <Route path="/doc-hieu/:blogId" element={<ReadingDetailPage />} />
+          <Route path="/doc-hieu/:blogId/tu-vung" element={<ReadingVocabularyPage />} />
         </Route>
         <Route path="*" element={<Navigate replace to="/" />} />
       </Routes>

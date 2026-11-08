@@ -341,8 +341,8 @@ export function VideosPage() {
                   {vocabularies.length > 0 ? (
                     <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
                       <table className="w-full min-w-lg text-left text-sm">
-                        <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">Từ vựng</th><th className="px-4 py-3">Nghĩa</th><th className="px-4 py-3">Ví dụ</th></tr></thead>
-                        <tbody>{vocabularies.map((item, index) => <tr className="border-t border-slate-100" key={item.id || index}><td className="px-4 py-3 font-bold text-cyan-700">{item.word || item.term || item.vocabulary || '—'}</td><td className="px-4 py-3">{item.meaning || item.definition || item.translation || '—'}</td><td className="px-4 py-3 text-slate-500">{item.example || item.exampleSentence || '—'}</td></tr>)}</tbody>
+                        <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">Từ vựng</th><th className="px-4 py-3">Phiên âm</th><th className="px-4 py-3">Nghĩa</th><th className="px-4 py-3">Ví dụ</th><th className="px-4 py-3">Dịch ví dụ</th></tr></thead>
+                        <tbody>{vocabularies.map((item, index) => <tr className="border-t border-slate-100" key={item.id || index}><td className="px-4 py-3 font-bold text-cyan-700">{item.word || item.term || item.vocabulary || '—'}</td><td className="px-4 py-3 text-slate-500">{item.phonetic || '—'}</td><td className="px-4 py-3">{item.meaning || item.definition || item.translation || '—'}</td><td className="whitespace-pre-wrap px-4 py-3 text-slate-500">{item.exampleSentence || item.example || '—'}</td><td className="whitespace-pre-wrap px-4 py-3 text-slate-500">{item.exampleSentenceTranslate || '—'}</td></tr>)}</tbody>
                       </table>
                     </div>
                   ) : <p className="mt-4 text-sm text-slate-500">{contentLoading ? 'Đang tải từ vựng...' : 'Chưa có từ vựng.'}</p>}

@@ -229,6 +229,70 @@ export function isGuestUser() {
   return typeof localStorage !== 'undefined' && !localStorage.getItem('accessToken')
 }
 
+function readingBase(guest) {
+  return guest ? '/api/v1/guest/reading-blogs' : '/api/v1/reading-blogs'
+}
+
+export async function getReadingBlogs(guest, params = {}) {
+  const { data } = await api.get(readingBase(guest), { params, skipAuth: guest })
+  return data
+}
+
+export async function getReadingTopics(guest) {
+  const { data } = await api.get(`${readingBase(guest)}/topics`, { skipAuth: guest })
+  return data
+}
+
+export async function getReadingBlog(guest, id) {
+  const { data } = await api.get(`${readingBase(guest)}/${encodeURIComponent(id)}`, { skipAuth: guest })
+  return data
+}
+
+export async function getReadingVocabularies(guest, id) {
+  const { data } = await api.get(`${readingBase(guest)}/${encodeURIComponent(id)}/vocabularies`, { skipAuth: guest })
+  return data
+}
+
+export async function answerReadingQuestion(guest, blogId, questionId, payload) {
+  const { data } = await api.post(
+    `${readingBase(guest)}/${encodeURIComponent(blogId)}/questions/${encodeURIComponent(questionId)}/answer`,
+    payload,
+    { skipAuth: guest },
+  )
+  return data
+}
+
+export async function getAdminReadingBlogs(params = {}) {
+  const { data } = await api.get('/api/v1/admin/reading-blogs', { params })
+  return data
+}
+
+export async function getAdminReadingBlog(id) {
+  const { data } = await api.get(`/api/v1/admin/reading-blogs/${encodeURIComponent(id)}`)
+  return data
+}
+
+export async function importReadingBlog(file) {
+  const payload = new FormData()
+  payload.append('file', file)
+  const { data } = await api.post('/api/v1/admin/reading-blogs/import', payload, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+export async function publishReadingBlog(id) {
+  await api.patch(`/api/v1/admin/reading-blogs/${encodeURIComponent(id)}/publish`)
+}
+
+export async function archiveReadingBlog(id) {
+  await api.patch(`/api/v1/admin/reading-blogs/${encodeURIComponent(id)}/archive`)
+}
+
+export async function setReadingGuestAccess(id, guestAccessible) {
+  await api.put(`/api/v1/admin/reading-blogs/${encodeURIComponent(id)}/guest-access`, { guestAccessible })
+}
+
 function guestAttemptConfig(submissionId) {
   return {
     skipAuth: true,

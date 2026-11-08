@@ -9,6 +9,7 @@ const navigation = [
   { label: 'Thi thử', to: '/thi-thu' },
   { label: 'Video', to: '/video' },
   { label: 'Từ Vựng', to: '/tu-vung' },
+  { label: 'Đọc hiểu', to: '/doc-hieu' },
 ]
 
 export function MainLayout() {
