@@ -10,8 +10,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { ExamPager, ExamSearchForm } from '../components/ExamListControls'
 import { PageIntro } from '../components/PageIntro'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { getApiErrorMessage, getMockExams, getMockReview, getMockScores } from '../services/api'
+
+const PAGE_SIZE = 12
 
 export function MockExamPage() {
   const navigate = useNavigate()
@@ -22,6 +26,10 @@ export function MockExamPage() {
   const [scoresLoading, setScoresLoading] = useState(true)
   const [scoresError, setScoresError] = useState('')
   const [reviewingId, setReviewingId] = useState('')
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [keywordInput, setKeywordInput] = useState('')
+  const keyword = useDebouncedValue(keywordInput.trim())
 
   async function handleReview(examId) {
     setReviewingId(examId)
@@ -38,38 +46,41 @@ export function MockExamPage() {
   }
 
   useEffect(() => {
-    async function loadMockPage() {
-      try {
-        const items = await getMockExams()
-        setExams(items)
-        setLoading(false)
+    let active = true
+    getMockExams({ page, size: PAGE_SIZE, keyword })
+      .then((result) => {
+        if (!active) return
+        setExams(result.items)
+        setTotalPages(result.totalPages)
+        setError('')
+      })
+      .catch((requestError) => {
+        if (active) setError(getApiErrorMessage(requestError, 'Không thể tải danh sách đề thi thử. Vui lòng thử lại.'))
+      })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [keyword, page])
 
-        try {
-          const scoreItems = await getMockScores()
-          setScores(scoreItems)
-          setExams(
-            items.map((exam) => ({
-              ...exam,
-              latestScore:
-                scoreItems
-                  .filter((score) => (score.examId || score.exam_id) === exam.id)
-                  .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))[0] || null,
-            })),
-          )
-        } catch (requestError) {
-          setScoresError(getApiErrorMessage(requestError, 'Không thể tải lịch sử điểm thi thử.'))
-        } finally {
-          setScoresLoading(false)
-        }
-      } catch (requestError) {
-        setError(getApiErrorMessage(requestError, 'Không thể tải danh sách đề thi thử. Vui lòng thử lại.'))
-        setLoading(false)
-        setScoresLoading(false)
-      }
-    }
-
-    loadMockPage()
+  useEffect(() => {
+    let active = true
+    getMockScores()
+      .then((items) => { if (active) setScores(items) })
+      .catch((requestError) => {
+        if (active) setScoresError(getApiErrorMessage(requestError, 'Không thể tải lịch sử điểm thi thử.'))
+      })
+      .finally(() => { if (active) setScoresLoading(false) })
+    return () => { active = false }
   }, [])
+
+  function changePage(nextPage) {
+    setLoading(true)
+    setPage(nextPage)
+  }
+
+  function changeKeyword(value) {
+    setKeywordInput(value)
+    setPage(0)
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-16">
@@ -78,13 +89,14 @@ export function MockExamPage() {
         eyebrow="Kiểm tra năng lực"
         title="Thi thử"
       />
-      {loading && <p className="text-slate-500">Đang tải danh sách đề thi...</p>}
-      {error && <p className="rounded-lg bg-red-50 p-4 text-red-600">{error}</p>}
       {scoresError && <p className="mt-4 rounded-lg bg-amber-50 p-4 text-amber-700">{scoresError}</p>}
       <ScoreChart error={scoresError} loading={scoresLoading} scores={scores} />
+      <ExamSearchForm keywordInput={keywordInput} onKeywordChange={changeKeyword} />
+      {loading && <p className="text-slate-500">Đang tải danh sách đề thi...</p>}
+      {error && <p className="rounded-lg bg-red-50 p-4 text-red-600">{error}</p>}
       {!loading && !error && exams.length === 0 && (
         <p className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
-          Chưa có đề thi thử nào được phát hành.
+          {keyword ? 'Không tìm thấy đề thi phù hợp.' : 'Chưa có đề thi thử nào được phát hành.'}
         </p>
       )}
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -98,10 +110,10 @@ export function MockExamPage() {
               {exam.durationMinutes || exam.duration || exam.timeLimitMinutes || 0} phút ·{' '}
               {exam.totalQuestions || exam.questionCount || 'Nhiều'} câu hỏi
             </p>
-            {exam.latestScore && (
-              <p className="mt-3 text-sm font-bold text-emerald-600">Điểm gần nhất: {exam.latestScore.score ?? '—'}</p>
+            {exam.latestScore != null && (
+              <p className="mt-3 text-sm font-bold text-emerald-600">Điểm gần nhất: {exam.latestScore}</p>
             )}
-            {exam.latestScore ? (
+            {exam.latestScore != null ? (
               <button className="mt-6 rounded-lg bg-slate-900 px-4 py-3 font-bold text-white" disabled={reviewingId === exam.id} onClick={() => handleReview(exam.id)} type="button">
                 {reviewingId === exam.id ? 'Đang tải...' : 'Review bài thi'}
               </button>
@@ -113,6 +125,7 @@ export function MockExamPage() {
           </article>
         ))}
       </div>
+      <ExamPager onPageChange={changePage} page={page} totalPages={totalPages} />
     </div>
   )
 }

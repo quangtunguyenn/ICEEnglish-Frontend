@@ -3,9 +3,10 @@ import { useMatch, useNavigate, useParams } from 'react-router-dom'
 import { ExamQuestion } from '../components/ExamQuestion'
 import { PassageViewer } from '../components/PassageViewer'
 import { useExamTimer } from '../hooks/useExamTimer'
-import { getApiErrorMessage, getExam, startExam, submitExam } from '../services/api'
+import { getApiErrorMessage, getExam, setActivePart, startExam, submitExam } from '../services/api'
 import { applyDisplayNumbers } from '../utils/examNumbering'
 import { readMockDraft, removeMockDraft, writeMockDraft } from '../utils/mockDraft'
+import { getServerRemainingMs } from '../utils/serverTime'
 
 function formatTime(seconds) {
   return `${Math.floor(seconds / 60)
@@ -80,12 +81,13 @@ export function ExamTakePage() {
   const isMock = isMockRoute || String(exam?.mode || '').toUpperCase() === 'MOCK'
   const isGeneralExam = !isMock
 
+  // timerDeadlineRef holds a performance.now() based deadline derived from the server's serverNow/expiresAt.
   useEffect(() => {
     if (!isMock || !mockDraft) return
-    const deadline = mockDraft.deadline
     const updateRemaining = () => {
-      setRemainingSeconds(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)))
-      if (Date.now() >= deadline) setMockExpired(true)
+      const remainingMs = timerDeadlineRef.current - performance.now()
+      setRemainingSeconds(Math.max(0, Math.ceil(remainingMs / 1000)))
+      if (remainingMs <= 0) setMockExpired(true)
     }
 
     updateRemaining()
@@ -104,7 +106,7 @@ export function ExamTakePage() {
           if (!accountId) throw new Error('Không xác định được tài khoản để lưu hoặc khôi phục lượt thi thử.')
           savedMock = readMockDraft(localStorage, accountId, examId)
         }
-        const submission = savedMock ? { submissionId: savedMock.submissionId, mode: 'MOCK' } : await startExam(examId)
+        const submission = await startExam(examId)
         const submissionId =
           submission.submissionId ||
           submission.submission_id ||
@@ -127,32 +129,37 @@ export function ExamTakePage() {
         if (!isMockRoute) return { loadedExam }
 
         const duration = getDurationSeconds(loadedExam)
-        if (!duration || !Number.isFinite(duration)) throw new Error('Đề thi thử không có thời lượng hợp lệ.')
-        const draft = savedMock || {
+        const remainingMs = getServerRemainingMs(submission, duration * 1000)
+        if (!remainingMs && !submission.expiresAt) throw new Error('Đề thi thử không có thời lượng hợp lệ.')
+        const deadlineAt = performance.now() + remainingMs
+        // A draft belongs to one attempt; if the server resumed a different one, start clean.
+        const usableDraft = savedMock && String(savedMock.submissionId) === String(submissionId) ? savedMock : null
+        const expiresAtMs = Date.parse(submission.expiresAt)
+        const draft = usableDraft || {
           version: 1,
           accountId: String(accountId),
           examId: String(examId),
           submissionId: String(submissionId),
-          deadline: Date.now() + duration * 1000,
+          deadline: Number.isFinite(expiresAtMs) ? expiresAtMs : Date.now() + remainingMs,
           answers: {},
           partTimes: {},
         }
-        if (!savedMock) writeMockDraft(localStorage, draft)
-        return { loadedExam, draft, restored: Boolean(savedMock) }
+        if (!usableDraft) writeMockDraft(localStorage, draft)
+        return { loadedExam, draft, deadlineAt, restored: Boolean(usableDraft) }
       })()
       loadRequestRef.current = { examId, isMockRoute, request }
     }
 
     loadRequestRef.current.request
-      .then(({ loadedExam, draft, restored }) => {
+      .then(({ loadedExam, draft, deadlineAt, restored }) => {
         if (!active) return
         if (draft) {
           setAnswers(draft.answers)
           restorePartTimes(draft.partTimes)
+          timerDeadlineRef.current = deadlineAt
           setMockDraft(draft)
-          timerDeadlineRef.current = draft.deadline
-          setRemainingSeconds(Math.max(0, Math.ceil((draft.deadline - Date.now()) / 1000)))
-          setMockExpired(Date.now() >= draft.deadline)
+          setRemainingSeconds(Math.max(0, Math.ceil((deadlineAt - performance.now()) / 1000)))
+          setMockExpired(performance.now() >= deadlineAt)
           if (restored) setSaveStatus({ error: false, message: 'Đã khôi phục bản lưu thi thử trên máy này.' })
         }
         setExam(loadedExam)
@@ -341,7 +348,7 @@ export function ExamTakePage() {
   }
 
   function chooseAnswer(questionId, selectedOpt) {
-    if (submitting || (isMock && (!mockDraft || Date.now() >= mockDraft.deadline))) return
+    if (submitting || (isMock && (!mockDraft || performance.now() >= timerDeadlineRef.current))) return
     answersTouchedRef.current = true
     setAnswers((current) => ({ ...current, [questionId]: selectedOpt }))
     setHasUnsavedChanges(true)
@@ -349,7 +356,7 @@ export function ExamTakePage() {
 
   function handleSaveDraft() {
     if (isMock) {
-      if (!mockDraft || Date.now() >= mockDraft.deadline || submitting) return
+      if (!mockDraft || performance.now() >= timerDeadlineRef.current || submitting) return
       try {
         if (getCurrentAccountId() !== mockDraft.accountId) {
           throw new Error('Tài khoản hiện tại đã thay đổi; không thể lưu lượt thi này.')
@@ -468,16 +475,11 @@ export function ExamTakePage() {
     submitInFlightRef.current = true
     setSubmitting(true)
     setError('')
-    const finalPartTimes = getPartTimes()
     const payload = {
       submissionId: exam.submissionId,
       answers: Object.entries(answers).map(([questionId, selectedOpt]) => ({
         questionId,
         selectedOpt,
-      })),
-      partLogs: exam.parts.map((part) => ({
-        partId: part.id || part.partId,
-        timeSpentSeconds: finalPartTimes[part.id || part.partId] || 0,
       })),
       exam_id: exam.examId || exam.exam_id || exam.id,
     }
@@ -517,7 +519,19 @@ export function ExamTakePage() {
       submissionWarnings.push('Không thể lưu kết quả trong phiên trình duyệt; hãy giữ trang kết quả mở.')
     }
     navigate(`/ket-qua/${result.submissionId}`, { state: { result, submissionWarnings } })
-  }, [answers, exam, getPartTimes, isGeneralExam, isMock, mockDraft, navigate])
+  }, [answers, exam, isGeneralExam, isMock, mockDraft, navigate])
+
+  const activePartId = activePart?.id || activePart?.partId
+  const submissionIdForTracking = exam?.submissionId
+  useEffect(() => {
+    if (!submissionIdForTracking || !activePartId) return
+    setActivePart(submissionIdForTracking, activePartId).catch((trackingError) => {
+      setSaveStatus({
+        error: true,
+        message: getApiErrorMessage(trackingError, 'Không ghi nhận được part đang làm lên server. Hãy chuyển part lại để thử lần nữa.'),
+      })
+    })
+  }, [activePartId, submissionIdForTracking])
 
   useEffect(() => {
     if (
@@ -525,7 +539,7 @@ export function ExamTakePage() {
       !exam ||
       !mockDraft ||
       !timerDeadlineRef.current ||
-      Date.now() < timerDeadlineRef.current ||
+      performance.now() < timerDeadlineRef.current ||
       remainingSeconds > 0 ||
       autoSubmittedRef.current
     ) return

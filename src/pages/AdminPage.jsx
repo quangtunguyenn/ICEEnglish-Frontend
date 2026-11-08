@@ -13,12 +13,14 @@ import {
   toggleExamAnswersRevealed,
   uploadLearningBundle,
 } from '../services/api'
+import { MockStatsSection } from '../components/MockStatsSection'
 import { formatInlineText, questionToHtml, textToHtml } from '../utils/textFormatting'
 
 const navigation = [
   { id: 'overview', label: 'Tổng quan', icon: '01' },
   { id: 'bundle', label: 'Nội dung bài học', icon: '02' },
   { id: 'exams', label: 'Quản lý đề thi', icon: '03' },
+  { id: 'mockStats', label: 'Thống kê thi thử', icon: '05' },
   { id: 'students', label: 'Tài khoản học sinh', icon: '04', adminOnly: true },
 ]
 
@@ -321,6 +323,7 @@ export function AdminPage() {
               preview={preview}
             />
           )}
+          {activeSection === 'mockStats' && <MockStatsSection />}
           {activeSection === 'students' && isAdmin && (
             <StudentsSection
               busy={busy}

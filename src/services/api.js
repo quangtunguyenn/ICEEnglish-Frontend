@@ -94,6 +94,28 @@ export async function getAdminExams(mode) {
   return extractExamList(data)
 }
 
+export async function getMockExamList({ page = 0, size = 20, keyword = '' } = {}) {
+  const params = { page, size }
+  if (keyword) params.keyword = keyword
+  const { data } = await api.get('/api/v1/admin/mock-exams', { params })
+  return data
+}
+
+export async function getMockExamOverview(examId) {
+  const { data } = await api.get(`/api/v1/admin/mock-exams/${examId}/stats/overview`)
+  return data
+}
+
+export async function getMockExamQuestionStats(examId) {
+  const { data } = await api.get(`/api/v1/admin/mock-exams/${examId}/stats/questions`)
+  return data
+}
+
+export async function getMockExamTop(examId, limit = 10) {
+  const { data } = await api.get(`/api/v1/admin/mock-exams/${examId}/stats/top`, { params: { limit } })
+  return data
+}
+
 export async function getExamPreview(examId) {
   const { data } = await api.get(`/api/v1/exams/${examId}/preview`)
   return data?.data || data?.result || data
@@ -133,28 +155,34 @@ function extractExamList(data) {
   return candidates.find(Array.isArray) || []
 }
 
-function isPublishedExam(exam) {
-  if (typeof exam.isPublished === 'boolean') return exam.isPublished
-  if (typeof exam.published === 'boolean') return exam.published
-  if (exam.status) return ['PUBLISHED', 'PUBLISH'].includes(String(exam.status).toUpperCase())
-  return true
+function normalizePage(data, fallbackPage, fallbackSize) {
+  const result = unwrapApiData(data)
+  if (Array.isArray(result)) {
+    return { items: result, page: 0, size: result.length, totalElements: result.length, totalPages: result.length ? 1 : 0 }
+  }
+  const items = result?.items || result?.content || []
+  return {
+    items,
+    page: result?.page ?? fallbackPage,
+    size: result?.size ?? fallbackSize,
+    totalElements: result?.totalElements ?? items.length,
+    totalPages: result?.totalPages ?? (items.length ? 1 : 0),
+  }
 }
 
-export async function getGeneralExams() {
-  const { data } = await api.get('/api/v1/exams', {
-    params: { mode: 'GENERAL_EXAM' },
-  })
-  return extractExamList(data).filter(isPublishedExam)
+export async function getGeneralExams({ page = 0, size = 12, keyword = '' } = {}) {
+  const params = { mode: 'GENERAL_EXAM', page, size, sort: 'createdAt,desc' }
+  if (keyword) params.keyword = keyword
+  const { data } = await api.get('/api/v1/exams', { params })
+  return normalizePage(data, page, size)
 }
 
-export async function getMockExams() {
-  const { data } = await api.get('/api/v1/exams', {
-    params: { mode: 'MOCK' },
-  })
-  return extractExamList(data).filter(
-    (exam) =>
-      (!exam.mode || String(exam.mode).toUpperCase() === 'MOCK') && isPublishedExam(exam),
-  )
+export async function getMockExams({ page = 0, size = 12, keyword = '', status = '' } = {}) {
+  const params = { mode: 'MOCK', page, size, sort: 'createdAt,desc' }
+  if (keyword) params.keyword = keyword
+  if (status) params.status = status
+  const { data } = await api.get('/api/v1/exams', { params })
+  return normalizePage(data, page, size)
 }
 
 export async function getExam(examId, submissionId) {
@@ -177,6 +205,10 @@ export async function getExamAnswersRevealed(examId) {
 export async function startExam(examId) {
   const { data } = await api.post(`/api/v1/submissions/start/${examId}`)
   return data.data || data
+}
+
+export async function setActivePart(submissionId, partId) {
+  await api.put(`/api/v1/submissions/${submissionId}/parts/${partId}/time`)
 }
 
 export async function startVideoHomework(videoId) {
@@ -241,11 +273,10 @@ export async function getLatestHomeworkReview(examId) {
 }
 
 export async function getMockScores() {
-  const { data } = await api.get('/api/v1/submissions/mock/scores')
-  const result = unwrapApiData(data)
-  const nestedResult = unwrapApiData(result)
-  if (Array.isArray(nestedResult)) return nestedResult
-  return nestedResult?.content || nestedResult?.items || []
+  const { data } = await api.get('/api/v1/submissions/mock/scores', {
+    params: { page: 0, size: 100, sort: 'submittedAt,desc' },
+  })
+  return normalizePage(data, 0, 100).items
 }
 
 export async function getMockReview(examId) {
