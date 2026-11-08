@@ -3,12 +3,14 @@ import { Link, useLocation } from 'react-router-dom'
 import { ExamPager, ExamSearchForm } from '../components/ExamListControls'
 import { PageIntro } from '../components/PageIntro'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
-import { getApiErrorMessage, getGeneralExams } from '../services/api'
+import { useGuestMode } from '../hooks/useGuestMode'
+import { getApiErrorMessage, getGeneralExams, getGuestExams } from '../services/api'
 
 const PAGE_SIZE = 12
 
 export function PracticePage() {
   const location = useLocation()
+  const guest = useGuestMode()
   const [exams, setExams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -20,18 +22,24 @@ export function PracticePage() {
 
   useEffect(() => {
     let active = true
-    getGeneralExams({ page, size: PAGE_SIZE, keyword })
+    const request = guest
+      ? getGuestExams('GENERAL_EXAM')
+      : getGeneralExams({ page, size: PAGE_SIZE, keyword })
+    request
       .then((result) => {
         if (!active) return
-        setExams(result.items)
-        setTotalPages(result.totalPages)
+        const items = guest
+          ? result.filter((exam) => String(exam.title || exam.name || '').toLocaleLowerCase().includes(keyword.toLocaleLowerCase()))
+          : result.items
+        setExams(items)
+        setTotalPages(guest ? 0 : result.totalPages)
       })
       .catch((requestError) => {
         if (active) setError(getApiErrorMessage(requestError, 'Không thể tải danh sách bài thi. Vui lòng thử lại.'))
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [keyword, page, retry])
+  }, [guest, keyword, page, retry])
 
   function retryLoading() {
     setError('')
@@ -86,7 +94,7 @@ export function PracticePage() {
             <p className="mt-2 text-sm text-slate-500">
               {exam.durationMinutes || exam.duration || 0} phút · {exam.totalQuestions || exam.questionCount || 'Nhiều'} câu hỏi
             </p>
-            {exam.latestScore != null && (
+            {!guest && exam.latestScore != null && (
               <>
                 <p className="mt-3 text-sm font-bold text-emerald-600">
                   Điểm gần nhất: {exam.latestScore}

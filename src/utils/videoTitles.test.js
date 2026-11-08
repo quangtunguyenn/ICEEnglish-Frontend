@@ -26,6 +26,23 @@ test('orders all 23 lesson numbers from 1 to 23', () => {
   assert.deepEqual(sortVideoTitles(titles), expected)
 })
 
+test('orders lesson objects with descriptions and preserves access flags and original order', () => {
+  const titles = Array.from({ length: 23 }, (_, index) => {
+    const number = 23 - index
+    return {
+      videoId: `video-${number}`,
+      title: `CHUYÊN ĐỀ ${number} - Nội dung bài học`,
+      accessible: number === 7,
+    }
+  })
+
+  const sorted = sortVideoTitles(titles)
+  assert.deepEqual(sorted.map((video) => video.videoId),
+    Array.from({ length: 23 }, (_, index) => `video-${index + 1}`))
+  assert.equal(sorted[6].accessible, true)
+  assert.equal(titles[0].videoId, 'video-23')
+})
+
 test('selects the requested ID without falling back to an unrelated video', () => {
   const titles = [{ videoId: 1, title: 'Chuyên đề 1' }, { videoId: 2, title: 'Chuyên đề 2' }]
 

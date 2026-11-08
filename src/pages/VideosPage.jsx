@@ -4,12 +4,16 @@ import {
   getApiErrorMessage,
   getVideoByTitle,
   getLatestHomeworkReview,
+  getGuestVideoLearningContent,
+  getGuestVideos,
+  getGuestVideoVocabularies,
   getVideoLearningContent,
   getVideoHomeworkAnswerUrl,
   getVideoHomeworkAnswers,
   getVideoTitles,
   getVideoVocabularies,
 } from '../services/api'
+import { useGuestMode } from '../hooks/useGuestMode'
 import { getSelectedVideo, getVideoId, getVideoTitle, sortVideoTitles } from '../utils/videoTitles'
 
 function getYoutubeEmbedUrl(videoUrl) {
@@ -49,6 +53,7 @@ function getHomeworkExamId(homework) {
 export function VideosPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const guest = useGuestMode()
   const [titles, setTitles] = useState([])
   const requestedVideoId = new URLSearchParams(location.search).get('videoId')
   const hasLocationSelection = Boolean(requestedVideoId || location.state?.selectedTitle || location.state?.videoId)
@@ -72,7 +77,8 @@ export function VideosPage() {
   const [homeworkReviewError, setHomeworkReviewError] = useState('')
 
   useEffect(() => {
-    getVideoTitles()
+    const request = guest ? getGuestVideos() : getVideoTitles()
+    request
       .then((items) => {
         setTitles(sortVideoTitles(items))
       })
@@ -80,7 +86,7 @@ export function VideosPage() {
         setError(getApiErrorMessage(requestError, 'Không thể tải danh sách video.')),
       )
       .finally(() => setLoadingTitles(false))
-  }, [])
+  }, [guest])
 
   const activeVideo = useMemo(
     () => getSelectedVideo(titles, selectedVideoId, selectedTitle),
@@ -88,9 +94,10 @@ export function VideosPage() {
   )
   const activeTitle = getVideoTitle(activeVideo)
   const activeVideoKey = getVideoId(activeVideo) || activeTitle
+  const inaccessibleVideo = guest && activeVideo && activeVideo.accessible !== true
 
   useEffect(() => {
-    if (!activeVideo) return
+    if (!activeVideo || inaccessibleVideo) return
     let active = true
 
     async function loadVideo() {
@@ -106,7 +113,9 @@ export function VideosPage() {
           throw new Error('Video tìm được không khớp với video đã chọn.')
         }
 
-        const content = await getVideoLearningContent(videoId)
+        const content = guest
+          ? await getGuestVideoLearningContent(videoId)
+          : await getVideoLearningContent(videoId)
         if (!active) return
 
         sessionStorage.setItem('selected-video-id', videoId)
@@ -130,11 +139,12 @@ export function VideosPage() {
     return () => {
       active = false
     }
-  }, [activeVideo, activeVideoKey, activeTitle, selectedVideoId])
-  const currentVideoId = getVideoId(video)
+  }, [activeVideo, activeVideoKey, activeTitle, selectedVideoId, guest, inaccessibleVideo])
+  const displayedVideo = inaccessibleVideo ? null : video
+  const currentVideoId = getVideoId(displayedVideo)
   const homeworkExamId = getHomeworkExamId(homework)
   const homeworkCompletionKey = currentVideoId && homeworkExamId
-    ? `video-homework-completed:${currentVideoId}:${homeworkExamId}`
+    ? `video-homework-completed:${guest ? 'guest:' : ''}${currentVideoId}:${homeworkExamId}`
     : ''
   const completionToken = homeworkCompletionKey
     ? sessionStorage.getItem(homeworkCompletionKey)
@@ -147,9 +157,10 @@ export function VideosPage() {
   const homeworkAnswerUrl = cachedAnswerUrl || fetchedAnswerForCurrentHomework?.url || ''
   const homeworkAnswerError = fetchedAnswerForCurrentHomework?.error || ''
   const loadingHomeworkAnswer =
-    completionToken === 'completed' && !fetchedAnswerForCurrentHomework
+    !guest && completionToken === 'completed' && !fetchedAnswerForCurrentHomework
 
   useEffect(() => {
+    if (guest) return
     if (!currentVideoId || !homeworkExamId || completionToken !== 'completed') return
 
     let active = true
@@ -173,26 +184,32 @@ export function VideosPage() {
     return () => {
       active = false
     }
-  }, [completionToken, currentVideoId, homeworkCompletionKey, homeworkExamId])
+  }, [completionToken, currentVideoId, guest, homeworkCompletionKey, homeworkExamId])
 
-  const loadingVideo = Boolean(activeVideoKey) && loadedVideoKey !== activeVideoKey
+  const loadingVideo = Boolean(activeVideoKey) && !inaccessibleVideo && loadedVideoKey !== activeVideoKey
   const contentLoading = loadingVideo
   const embedUrl = useMemo(
     () =>
       getYoutubeEmbedUrl(
-        video?.videoUrl ||
-          video?.video_url ||
-          video?.url ||
-          video?.embedUrl ||
-          video?.embed_url,
+        displayedVideo?.videoUrl ||
+          displayedVideo?.video_url ||
+          displayedVideo?.url ||
+          displayedVideo?.embedUrl ||
+          displayedVideo?.embed_url,
       ),
-    [video],
+    [displayedVideo],
   )
-  const videoTitle = loadingVideo ? activeTitle : video?.title || activeTitle
+  const videoTitle = loadingVideo ? activeTitle : displayedVideo?.title || activeTitle
 
   function selectVideo(item) {
     const title = getVideoTitle(item)
     const videoId = getVideoId(item)
+    if (guest && item.accessible !== true) {
+      navigate('/dang-nhap', {
+        state: { from: { pathname: '/video', search: videoId ? `?videoId=${encodeURIComponent(videoId)}` : '' } },
+      })
+      return
+    }
     sessionStorage.setItem('selected-video-title', title)
     if (videoId) {
       sessionStorage.setItem('selected-video-id', videoId)
@@ -215,7 +232,9 @@ export function VideosPage() {
         ? knownVocabularies
         : videoId === currentVideoId && vocabularies.length
           ? vocabularies
-          : await getVideoVocabularies(videoId)
+          : guest
+            ? await getGuestVideoVocabularies(videoId)
+            : await getVideoVocabularies(videoId)
       if (!lessonVocabularies.length) {
         setVocabularyPracticeError('Bài học này chưa có từ vựng để luyện tập.')
         return
@@ -236,7 +255,7 @@ export function VideosPage() {
   }
 
   async function reviewLatestHomework() {
-    if (!homeworkExamId || reviewingHomework) return
+    if (guest || !homeworkExamId || reviewingHomework) return
 
     setReviewingHomework(true)
     setHomeworkReviewError('')
@@ -280,7 +299,7 @@ export function VideosPage() {
             <h1 className="w-full text-center text-2xl font-extrabold text-cyan-900">{videoTitle || 'Tên video bài giảng'}</h1>
           </div>
           {loadingVideo && <div className="flex aspect-video items-center justify-center rounded-xl bg-slate-950 text-sm text-slate-300">Đang tải video...</div>}
-          {!loadingVideo && video && embedUrl && (
+          {!loadingVideo && displayedVideo && embedUrl && (
             <>
               <div
                 className="exam-video-frame relative overflow-hidden rounded-xl bg-black select-none"
@@ -338,7 +357,7 @@ export function VideosPage() {
                         onClick={() => {
                           sessionStorage.setItem('selected-video-title', videoTitle)
                           sessionStorage.setItem('selected-video-id', currentVideoId)
-                          navigate(`/video/${encodeURIComponent(getVideoId(video))}/homework`, {
+                          navigate(`/video/${encodeURIComponent(getVideoId(displayedVideo))}/homework`, {
                             state: { homework, title: videoTitle },
                           })
                         }}
@@ -346,14 +365,14 @@ export function VideosPage() {
                       >
                         Vào làm bài tập về nhà
                       </button>
-                      <button
+                      {!guest && <button
                         className="mt-3 block rounded-lg border border-slate-300 bg-white px-5 py-3 font-bold text-slate-800 hover:border-cyan-600 hover:text-cyan-800 disabled:cursor-wait disabled:opacity-50"
                         disabled={reviewingHomework}
                         onClick={reviewLatestHomework}
                         type="button"
                       >
                         {reviewingHomework ? 'Đang tải bài đã làm...' : 'Xem lại bài tập về nhà gần nhất'}
-                      </button>
+                      </button>}
                       {homeworkReviewError && (
                         <p aria-live="polite" className="mt-3 text-sm font-semibold text-red-700">
                           {homeworkReviewError}
@@ -376,14 +395,19 @@ export function VideosPage() {
               </div>
             </>
           )}
-          {!loadingVideo && video && !embedUrl && (
+          {!loadingVideo && displayedVideo && !embedUrl && (
             <p className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
               Video này chưa có định dạng YouTube hợp lệ để phát.
             </p>
           )}
-          {!loadingVideo && !video && !error && (
+          {!loadingVideo && !displayedVideo && !error && (
             <div className="flex aspect-video items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-              Chọn video ở danh sách bên phải.
+              {guest && activeVideo && activeVideo.accessible !== true ? (
+                <div className="text-center">
+                  <p>Chuyên đề này yêu cầu đăng nhập.</p>
+                  <button className="mt-3 rounded-lg bg-cyan-600 px-4 py-2 font-bold text-white" onClick={() => selectVideo(activeVideo)} type="button">Đăng nhập để học</button>
+                </div>
+              ) : 'Chọn video ở danh sách bên phải.'}
             </div>
           )}
         </section>
@@ -406,14 +430,14 @@ export function VideosPage() {
               return (
               <div className={`mb-3 rounded-xl border p-3 ${activeVideo === item ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200'}`} key={itemKey}>
                 <button
-                  className="w-full text-left text-sm font-extrabold text-red-600"
+                  className={`w-full text-left text-sm font-extrabold ${guest && item.accessible !== true ? 'text-slate-500' : 'text-red-600'}`}
                   aria-current={activeVideo === item ? 'true' : undefined}
                   onClick={() => selectVideo(item)}
                   type="button"
                 >
-                  {index + 1}. {title}
+                  {index + 1}. {title}{guest && item.accessible !== true ? ' · 🔒 Đăng nhập' : ''}
                 </button>
-                {activeVideo === item && (
+                {activeVideo === item && (!guest || item.accessible === true) && (
                   <ul className="mt-2 space-y-1 text-xs font-semibold text-slate-600">
                     <li><button className="hover:text-cyan-700" onClick={() => document.getElementById('document')?.scrollIntoView({ behavior: 'smooth' })} type="button">• File tài liệu</button></li>
                     <li><button className="hover:text-cyan-700" onClick={() => document.getElementById('homework')?.scrollIntoView({ behavior: 'smooth' })} type="button">• Bài tập về nhà</button></li>

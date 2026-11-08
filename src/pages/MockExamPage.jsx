@@ -13,12 +13,14 @@ import {
 import { ExamPager, ExamSearchForm } from '../components/ExamListControls'
 import { PageIntro } from '../components/PageIntro'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
-import { getApiErrorMessage, getMockExams, getMockReview, getMockScores } from '../services/api'
+import { useGuestMode } from '../hooks/useGuestMode'
+import { getApiErrorMessage, getGuestExams, getMockExams, getMockReview, getMockScores } from '../services/api'
 
 const PAGE_SIZE = 12
 
 export function MockExamPage() {
   const navigate = useNavigate()
+  const guest = useGuestMode()
   const [exams, setExams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -47,11 +49,17 @@ export function MockExamPage() {
 
   useEffect(() => {
     let active = true
-    getMockExams({ page, size: PAGE_SIZE, keyword })
+    const request = guest
+      ? getGuestExams('MOCK')
+      : getMockExams({ page, size: PAGE_SIZE, keyword })
+    request
       .then((result) => {
         if (!active) return
-        setExams(result.items)
-        setTotalPages(result.totalPages)
+        const items = guest
+          ? result.filter((exam) => String(exam.title || exam.name || '').toLocaleLowerCase().includes(keyword.toLocaleLowerCase()))
+          : result.items
+        setExams(items)
+        setTotalPages(guest ? 0 : result.totalPages)
         setError('')
       })
       .catch((requestError) => {
@@ -59,9 +67,10 @@ export function MockExamPage() {
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [keyword, page])
+  }, [guest, keyword, page])
 
   useEffect(() => {
+    if (guest) return
     let active = true
     getMockScores()
       .then((items) => { if (active) setScores(items) })
@@ -70,7 +79,7 @@ export function MockExamPage() {
       })
       .finally(() => { if (active) setScoresLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [guest])
 
   function changePage(nextPage) {
     setLoading(true)
@@ -85,12 +94,14 @@ export function MockExamPage() {
   return (
     <div className="mx-auto max-w-7xl px-6 py-16">
       <PageIntro
-        description="Chọn một đề thi thử để làm bài trong thời gian quy định. Bài tự nộp khi hết giờ nếu trang đang mở và có kết nối; hãy lưu thường xuyên trên thiết bị này."
+        description={guest
+          ? 'Chọn một đề thi mẫu. Thời hạn được máy chủ xác thực; kết quả chỉ được giữ tạm trong phiên trình duyệt này.'
+          : 'Chọn một đề thi thử để làm bài trong thời gian quy định. Bài tự nộp khi hết giờ nếu trang đang mở và có kết nối; hãy lưu thường xuyên trên thiết bị này.'}
         eyebrow="Kiểm tra năng lực"
         title="Thi thử"
       />
       {scoresError && <p className="mt-4 rounded-lg bg-amber-50 p-4 text-amber-700">{scoresError}</p>}
-      <ScoreChart error={scoresError} loading={scoresLoading} scores={scores} />
+      {!guest && <ScoreChart error={scoresError} loading={scoresLoading} scores={scores} />}
       <ExamSearchForm keywordInput={keywordInput} onKeywordChange={changeKeyword} />
       {loading && <p className="text-slate-500">Đang tải danh sách đề thi...</p>}
       {error && <p className="rounded-lg bg-red-50 p-4 text-red-600">{error}</p>}
@@ -110,10 +121,10 @@ export function MockExamPage() {
               {exam.durationMinutes || exam.duration || exam.timeLimitMinutes || 0} phút ·{' '}
               {exam.totalQuestions || exam.questionCount || 'Nhiều'} câu hỏi
             </p>
-            {exam.latestScore != null && (
+            {!guest && exam.latestScore != null && (
               <p className="mt-3 text-sm font-bold text-emerald-600">Điểm gần nhất: {exam.latestScore}</p>
             )}
-            {exam.latestScore != null ? (
+            {!guest && exam.latestScore != null ? (
               <button className="mt-6 rounded-lg bg-slate-900 px-4 py-3 font-bold text-white" disabled={reviewingId === exam.id} onClick={() => handleReview(exam.id)} type="button">
                 {reviewingId === exam.id ? 'Đang tải...' : 'Review bài thi'}
               </button>

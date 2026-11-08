@@ -3,12 +3,17 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ExamQuestion } from '../components/ExamQuestion'
 import { PassageViewer } from '../components/PassageViewer'
 import { useExamTimer } from '../hooks/useExamTimer'
+import { useGuestMode } from '../hooks/useGuestMode'
 import {
   getApiErrorMessage,
+  getGuestHomeworkAnswers,
+  getGuestVideoLearningContent,
   getVideoHomework,
   getVideoHomeworkAnswerUrl,
   getVideoHomeworkAnswers,
+  startGuestHomework,
   startVideoHomework,
+  submitGuestHomework,
   submitVideoHomework,
 } from '../services/api'
 
@@ -52,14 +57,15 @@ export function HomeworkPage() {
   const { videoId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const [homework, setHomework] = useState(() => location.state?.homework || null)
+  const guest = useGuestMode()
+  const [homework, setHomework] = useState(() => guest ? null : location.state?.homework || null)
   const [submission, setSubmission] = useState(null)
   const [answers, setAnswers] = useState({})
   const [markedQuestions, setMarkedQuestions] = useState({})
   const [highlightedContent, setHighlightedContent] = useState({})
   const [partIndex, setPartIndex] = useState(0)
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0)
-  const [loading, setLoading] = useState(() => !location.state?.homework)
+  const [loading, setLoading] = useState(() => guest || !location.state?.homework)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
@@ -73,15 +79,18 @@ export function HomeworkPage() {
   const questionRefs = useRef({})
 
   useEffect(() => {
-    if (location.state?.homework) return
+    if (!guest && location.state?.homework) return
 
-    getVideoHomework(videoId)
+    const request = guest
+      ? getGuestVideoLearningContent(videoId).then((content) => content?.homework || null)
+      : getVideoHomework(videoId)
+    request
       .then(setHomework)
       .catch((requestError) => setError(
         getApiErrorMessage(requestError, 'Không thể tải bài tập về nhà.'),
       ))
       .finally(() => setLoading(false))
-  }, [location.state, videoId])
+  }, [guest, location.state, videoId])
 
   useEffect(() => {
     const examId = getExamId(homework)
@@ -89,7 +98,8 @@ export function HomeworkPage() {
     startRequestedForRef.current = examId
     setLoading(true)
 
-    startVideoHomework(videoId)
+    const request = guest ? startGuestHomework(videoId) : startVideoHomework(videoId)
+    request
       .then((startedSubmission) => {
         const submissionId = getSubmissionId(startedSubmission)
         if (!submissionId) {
@@ -101,7 +111,7 @@ export function HomeworkPage() {
         getApiErrorMessage(requestError, 'Không thể bắt đầu bài tập. Vui lòng thử lại.'),
       ))
       .finally(() => setLoading(false))
-  }, [homework, videoId])
+  }, [guest, homework, videoId])
 
   const parts = useMemo(() => getHomeworkParts(homework), [homework])
   const activePart = parts[partIndex]
@@ -174,29 +184,45 @@ export function HomeworkPage() {
     setError('')
     try {
       const examId = getExamId(homework)
-      const submittedResult = await submitVideoHomework({
-        submissionId: submission.submissionId,
-        exam_id: examId,
+      const answerPayload = {
         answers: questionItems.map((question) => ({
           questionId: question.id,
           selectedOpt: answers[question.id] ?? null,
         })),
-      })
+      }
+      const submittedResult = guest
+        ? await submitGuestHomework(videoId, submission.submissionId, answerPayload)
+        : await submitVideoHomework({
+            ...answerPayload,
+            submissionId: submission.submissionId,
+            exam_id: examId,
+          })
       setResult(submittedResult)
-      const completionKey = `video-homework-completed:${videoId}:${examId}`
+      const completionKey = `video-homework-completed:${guest ? 'guest:' : ''}${videoId}:${examId}`
       const submittedAnswerUrl = getVideoHomeworkAnswerUrl(submittedResult)
-      sessionStorage.setItem(completionKey, submittedAnswerUrl || 'completed')
+      setAnswerError('')
+      try {
+        sessionStorage.setItem(completionKey, submittedAnswerUrl || 'completed')
+      } catch {
+        setAnswerError('Đã nộp bài nhưng không thể lưu trạng thái hoàn thành trên trình duyệt.')
+      }
       setAnswerUrl(submittedAnswerUrl)
       setAnswerLoading(true)
-      setAnswerError('')
-      getVideoHomeworkAnswers(examId)
+      const answerRequest = guest
+        ? getGuestHomeworkAnswers(videoId, submission.submissionId)
+        : getVideoHomeworkAnswers(examId)
+      answerRequest
         .then((answerResponse) => {
           const fetchedAnswerUrl = getVideoHomeworkAnswerUrl(answerResponse)
-          if (!fetchedAnswerUrl) {
+          if (!fetchedAnswerUrl && !guest) {
             throw new Error('API không trả về answer_url.')
           }
           setAnswerUrl(fetchedAnswerUrl)
-          sessionStorage.setItem(completionKey, fetchedAnswerUrl)
+          try {
+            sessionStorage.setItem(completionKey, fetchedAnswerUrl || 'completed')
+          } catch {
+            setAnswerError('Đã tải kết quả nhưng không thể lưu trạng thái hoàn thành trên trình duyệt.')
+          }
         })
         .catch((requestError) => {
           if (!submittedAnswerUrl) {

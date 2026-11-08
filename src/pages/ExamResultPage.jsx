@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
+import { useGuestMode } from '../hooks/useGuestMode'
 import { getApiErrorMessage, getExamAnswersRevealed, getSubmissionPartLogs } from '../services/api'
 import { buildNumberMap, renumberText } from '../utils/examNumbering'
 import { formatInlineText, questionToHtml, textToHtml } from '../utils/textFormatting'
@@ -85,15 +86,19 @@ function groupQuestionsByPart(result) {
 export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
   const { submissionId } = useParams()
   const location = useLocation()
+  const isGuest = useGuestMode()
   const result = resultOverride || location.state?.result || readStoredResult(submissionId)
+  const guest = location.state?.guest === true || result?.guest === true ||
+    (isGuest && submissionId === 'khach')
+  const requiresLogin = isGuest && !guest
   const [partTimeLogs, setPartTimeLogs] = useState(result?.partTimeLogs || [])
-  const [partLogsLoading, setPartLogsLoading] = useState(Boolean(submissionId))
+  const [partLogsLoading, setPartLogsLoading] = useState(Boolean(submissionId && !guest && !requiresLogin))
   const [partLogsError, setPartLogsError] = useState('')
   const [answerReveal, setAnswerReveal] = useState(null)
   const examId = result?.examId || result?.exam_id
 
   useEffect(() => {
-    if (!examId) return
+    if (!examId || guest || requiresLogin) return
 
     let active = true
     getExamAnswersRevealed(examId)
@@ -107,10 +112,10 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
     return () => {
       active = false
     }
-  }, [examId])
+  }, [examId, guest, requiresLogin])
 
   useEffect(() => {
-    if (!submissionId) return
+    if (guest || requiresLogin || !submissionId) return
 
     getSubmissionPartLogs(submissionId)
       .then(setPartTimeLogs)
@@ -118,15 +123,19 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
         setPartLogsError(getApiErrorMessage(requestError, 'Không thể tải thời gian làm bài.'))
       })
       .finally(() => setPartLogsLoading(false))
-  }, [submissionId])
+  }, [guest, requiresLogin, submissionId])
 
   const percentage = useMemo(() => {
     if (!result?.totalQuestions) return 0
     return Math.round((result.totalCorrect / result.totalQuestions) * 100)
   }, [result])
   const currentAnswerReveal = answerReveal?.examId === examId ? answerReveal : null
-  const answersRevealed = currentAnswerReveal?.revealed === true
+  const answersRevealed = guest || currentAnswerReveal?.revealed === true
   const answerParts = useMemo(() => groupQuestionsByPart(result), [result])
+
+  if (requiresLogin) {
+    return <Navigate replace to="/dang-nhap" state={{ from: { pathname: location.pathname, search: location.search } }} />
+  }
 
   if (!result) {
     return (
@@ -171,6 +180,17 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
         <SummaryCard label="Câu sai" value={result.totalIncorrect ?? 0} valueClass="text-red-600" />
       </div>
 
+      {guest && (result.answerUrl || result.answerUrlError) && (
+        <section className="mt-6 rounded-xl border border-cyan-100 bg-cyan-50 p-5">
+          {result.answerUrl && (
+            <a className="inline-flex rounded-lg bg-cyan-700 px-4 py-2 font-bold text-white hover:bg-cyan-800" href={result.answerUrl} rel="noreferrer" target="_blank">
+              Xem đáp án chi tiết
+            </a>
+          )}
+          {result.answerUrlError && <p className="text-sm font-semibold text-amber-800">{result.answerUrlError}</p>}
+        </section>
+      )}
+
       <section className="mt-10">
         <h2 className="text-2xl font-extrabold text-slate-900">Thời gian theo từng Part</h2>
         {partLogsLoading && <p className="mt-4 text-sm text-slate-500">Đang tải thời gian làm bài...</p>}
@@ -195,7 +215,7 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
         <h2 className="text-2xl font-extrabold text-slate-900">
           {answersRevealed ? 'Chi tiết đáp án' : 'Chi tiết câu trả lời'}
         </h2>
-        {!currentAnswerReveal && examId && (
+        {!guest && !currentAnswerReveal && examId && (
           <p className="mt-3 text-sm text-slate-500">Đang kiểm tra trạng thái công bố đáp án...</p>
         )}
         {currentAnswerReveal && !answersRevealed && (

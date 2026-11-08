@@ -66,6 +66,8 @@ export function LoginPage() {
       }
       const isStaff = roles.includes('ADMIN') || roles.includes('TEACHER')
       const requestedPath = location.state?.from?.pathname
+        ? `${location.state.from.pathname}${location.state.from.search || ''}`
+        : ''
       navigate(isStaff ? '/quan-tri' : requestedPath === '/quan-tri' ? '/' : requestedPath || '/', {
         replace: true,
       });

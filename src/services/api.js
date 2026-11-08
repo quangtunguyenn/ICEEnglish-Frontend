@@ -6,6 +6,19 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+function notifyAuthChange() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('iceenglish:auth-change'))
+  }
+}
+
+export function logout() {
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('refreshToken')
+  localStorage.removeItem('currentUser')
+  notifyAuthChange()
+}
+
 function findAccessToken(value, allowString = true) {
   if (typeof value === 'string') {
     const token = value.replace(/^Bearer\s+/i, '').trim()
@@ -30,11 +43,37 @@ function findAccessToken(value, allowString = true) {
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken')
-  if (token && !config.skipAuth) {
+  if (config.skipAuth) {
+    if (typeof config.headers?.delete === 'function') config.headers.delete('Authorization')
+    else if (config.headers) delete config.headers.Authorization
+  } else if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status
+    const message = [
+      error.response?.data?.message,
+      error.response?.data?.error,
+    ].filter(Boolean).join(' ').toLocaleLowerCase()
+    const invalidAuthentication =
+      (status === 401 || status === 403) &&
+      /(token|user\s*\/\s*role|user or role)/i.test(message) &&
+      /(thiếu|sai|hết hạn|không hợp lệ|invalid|expired|missing|unauthorized)/i.test(message)
+
+    const token = localStorage.getItem('accessToken')
+    if (invalidAuthentication && token && !error.config?.skipAuth &&
+        error.config?.headers?.Authorization === `Bearer ${token}`) {
+      logout()
+    }
+
+    return Promise.reject(error)
+  },
+)
 
 export async function loginStudent(credentials) {
   const { data } = await api.post('/api/v1/auth/login', credentials, { skipAuth: true })
@@ -54,6 +93,7 @@ export async function loginStudent(credentials) {
   if (result.user || result.student) {
     localStorage.setItem('currentUser', JSON.stringify(result.user || result.student))
   }
+  notifyAuthChange()
 
   return result
 }
@@ -185,6 +225,75 @@ export async function getMockExams({ page = 0, size = 12, keyword = '', status =
   return normalizePage(data, page, size)
 }
 
+export function isGuestUser() {
+  return typeof localStorage !== 'undefined' && !localStorage.getItem('accessToken')
+}
+
+function guestAttemptConfig(submissionId) {
+  return {
+    skipAuth: true,
+    headers: submissionId ? { 'X-Guest-Attempt': submissionId } : {},
+  }
+}
+
+export async function getGuestExams(mode) {
+  const { data } = await api.get('/api/v1/guest/exams', {
+    params: { mode },
+    skipAuth: true,
+  })
+  return extractExamList(data)
+}
+
+export async function startGuestExam(examId, submissionId) {
+  const { data } = await api.post(
+    `/api/v1/guest/exams/${encodeURIComponent(examId)}/start`,
+    null,
+    guestAttemptConfig(submissionId),
+  )
+  return unwrapApiData(data)
+}
+
+export async function getGuestExam(examId, submissionId) {
+  const { data } = await api.get(
+    `/api/v1/guest/exams/${encodeURIComponent(examId)}`,
+    guestAttemptConfig(submissionId),
+  )
+  return unwrapApiData(data)
+}
+
+export async function setGuestExamActivePart(examId, partId, submissionId) {
+  await api.put(
+    `/api/v1/guest/exams/${encodeURIComponent(examId)}/parts/${encodeURIComponent(partId)}/time`,
+    null,
+    guestAttemptConfig(submissionId),
+  )
+}
+
+export async function getGuestExamPartLogs(examId, submissionId) {
+  const { data } = await api.get(
+    `/api/v1/guest/exams/${encodeURIComponent(examId)}/part-logs`,
+    guestAttemptConfig(submissionId),
+  )
+  return unwrapApiData(data)
+}
+
+export async function submitGuestExam(examId, submissionId, payload) {
+  const { data } = await api.post(
+    `/api/v1/guest/exams/${encodeURIComponent(examId)}/submit`,
+    payload,
+    guestAttemptConfig(submissionId),
+  )
+  return unwrapApiData(data)
+}
+
+export async function getGuestExamAnswerUrl(examId, submissionId) {
+  const { data } = await api.get(
+    `/api/v1/guest/exams/${encodeURIComponent(examId)}/answer-url`,
+    guestAttemptConfig(submissionId),
+  )
+  return unwrapApiData(data)
+}
+
 export async function getExam(examId, submissionId) {
   const { data } = await api.get(`/api/v1/exams/${examId}`, {
     params: submissionId ? { submissionId } : {},
@@ -298,6 +407,54 @@ export async function getVideoTitles() {
   return Array.isArray(result) ? result : result?.items || result?.content || []
 }
 
+export async function getGuestVideos() {
+  const { data } = await api.get('/api/v1/guest/videos', { skipAuth: true })
+  return extractExamList(data)
+}
+
+export async function getGuestVideoLearningContent(videoId) {
+  const { data } = await api.get(
+    `/api/v1/guest/videos/${encodeURIComponent(videoId)}/learning-content`,
+    { skipAuth: true },
+  )
+  return unwrapApiData(data)
+}
+
+export async function getGuestVideoVocabularies(videoId) {
+  const { data } = await api.get(
+    `/api/v1/guest/videos/${encodeURIComponent(videoId)}/vocabularies`,
+    { skipAuth: true },
+  )
+  const result = unwrapApiData(data)
+  return Array.isArray(result) ? result : result?.items || result?.content || []
+}
+
+export async function startGuestHomework(videoId, submissionId) {
+  const { data } = await api.post(
+    `/api/v1/guest/videos/${encodeURIComponent(videoId)}/homework/start`,
+    null,
+    guestAttemptConfig(submissionId),
+  )
+  return unwrapApiData(data)
+}
+
+export async function submitGuestHomework(videoId, submissionId, payload) {
+  const { data } = await api.post(
+    `/api/v1/guest/videos/${encodeURIComponent(videoId)}/homework/submit`,
+    payload,
+    guestAttemptConfig(submissionId),
+  )
+  return unwrapApiData(data)
+}
+
+export async function getGuestHomeworkAnswers(videoId, submissionId) {
+  const { data } = await api.get(
+    `/api/v1/guest/videos/${encodeURIComponent(videoId)}/homework/answers`,
+    guestAttemptConfig(submissionId),
+  )
+  return unwrapApiData(data)
+}
+
 export async function getVideoByTitle(title) {
   const { data } = await api.get('/api/v1/videos', { params: { title } })
   const candidates = [
@@ -352,10 +509,13 @@ export function getVideoHomeworkAnswerUrl(response) {
     response?.result?.data,
   ]
   const answer = candidates.find((candidate) =>
-    typeof candidate?.answer_url === 'string' || typeof candidate?.answerUrl === 'string',
+    typeof candidate?.answer_url === 'string' ||
+    typeof candidate?.answerUrl === 'string' ||
+    typeof candidate?.answers_url === 'string' ||
+    typeof candidate?.answersUrl === 'string',
   )
 
-  return answer?.answer_url || answer?.answerUrl || ''
+  return answer?.answer_url || answer?.answerUrl || answer?.answers_url || answer?.answersUrl || ''
 }
 
 export async function submitVideoHomework(payload) {

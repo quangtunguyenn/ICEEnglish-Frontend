@@ -9,6 +9,7 @@ import {
   getExamAnswersRevealed,
   getExamPreview,
   importExam,
+  logout,
   publishExam,
   toggleExamAnswersRevealed,
   uploadLearningBundle,
@@ -228,10 +229,12 @@ export function AdminPage() {
   }
 
   function signOut() {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('currentUser')
-    navigate('/dang-nhap', { replace: true })
+    try {
+      logout()
+      navigate('/dang-nhap', { replace: true })
+    } catch {
+      setError('Không thể đăng xuất. Vui lòng kiểm tra quyền lưu trữ của trình duyệt và thử lại.')
+    }
   }
 
   if (access === 'checking') {

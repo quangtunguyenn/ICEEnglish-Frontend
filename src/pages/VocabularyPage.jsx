@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { getApiErrorMessage, getVideoTitles, getVideoVocabularies } from '../services/api'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useGuestMode } from '../hooks/useGuestMode'
+import {
+  getApiErrorMessage,
+  getGuestVideos,
+  getGuestVideoVocabularies,
+  getVideoTitles,
+  getVideoVocabularies,
+} from '../services/api'
+import { sortVideoTitles } from '../utils/videoTitles'
+
+const EMPTY_VOCABULARIES = []
 
 function getVideoId(video) {
   return video?.videoId || video?.video_id || video?.id || ''
@@ -47,6 +57,8 @@ function createQuizDeck(vocabularies) {
 
 export function VocabularyPage() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const guest = useGuestMode()
   const [videos, setVideos] = useState([])
   const [videosLoading, setVideosLoading] = useState(true)
   const [videosError, setVideosError] = useState('')
@@ -57,7 +69,14 @@ export function VocabularyPage() {
   )
   const [vocabulariesLoading, setVocabulariesLoading] = useState(false)
   const [vocabulariesError, setVocabulariesError] = useState('')
-  const quizDeck = useMemo(() => createQuizDeck(vocabularies), [vocabularies])
+  const selectedVideoLocked = guest && Boolean(selectedVideoId) && (
+    videosLoading || videos.find((video) => getVideoId(video) === selectedVideoId)?.accessible !== true
+  )
+  const availableVocabularies = selectedVideoLocked ? EMPTY_VOCABULARIES : vocabularies
+  const availableVocabulariesError = selectedVideoLocked
+    ? 'Chuyên đề này yêu cầu đăng nhập để xem từ vựng.'
+    : vocabulariesError
+  const quizDeck = useMemo(() => createQuizDeck(availableVocabularies), [availableVocabularies])
   const [mode, setMode] = useState('flip')
   const [index, setIndex] = useState(0)
   const [isFlipped, setIsFlipped] = useState(false)
@@ -66,9 +85,10 @@ export function VocabularyPage() {
 
   useEffect(() => {
     let active = true
-    getVideoTitles()
+    const request = guest ? getGuestVideos() : getVideoTitles()
+    request
       .then((items) => {
-        if (active) setVideos(items)
+        if (active) setVideos(sortVideoTitles(items))
       })
       .catch((requestError) => {
         if (active) setVideosError(getApiErrorMessage(requestError, 'Không thể tải danh sách video.'))
@@ -80,13 +100,19 @@ export function VocabularyPage() {
     return () => {
       active = false
     }
-  }, [])
+  }, [guest])
 
   async function selectVideo(video) {
     const videoId = getVideoId(video)
     const videoTitle = getVideoTitle(video)
     if (!videoId) {
       setVocabulariesError('Video này chưa có video_id hợp lệ.')
+      return
+    }
+    if (guest && video.accessible !== true) {
+      navigate('/dang-nhap', {
+        state: { from: { pathname: '/video', search: `?videoId=${encodeURIComponent(videoId)}` } },
+      })
       return
     }
 
@@ -101,7 +127,9 @@ export function VocabularyPage() {
     const requestId = ++vocabularyRequestId.current
     setVocabulariesLoading(true)
     try {
-      const items = await getVideoVocabularies(videoId)
+      const items = guest
+        ? await getGuestVideoVocabularies(videoId)
+        : await getVideoVocabularies(videoId)
       if (requestId !== vocabularyRequestId.current) return
       setVocabularies(normalizeVocabulary(items))
     } catch (requestError) {
@@ -116,8 +144,8 @@ export function VocabularyPage() {
     }
   }
 
-  const currentIndex = Math.min(index, Math.max(vocabularies.length - 1, 0))
-  const currentVocabulary = vocabularies[currentIndex]
+  const currentIndex = Math.min(index, Math.max(availableVocabularies.length - 1, 0))
+  const currentVocabulary = availableVocabularies[currentIndex]
   const currentQuiz = quizDeck[currentIndex]
   const isQuizCorrect = selectedVocabularyId === currentVocabulary?.id
 
@@ -163,6 +191,7 @@ export function VocabularyPage() {
               const title = getVideoTitle(video)
               const isSelected = selectedVideoId === videoId
 
+              const isLocked = guest && video.accessible !== true
               return (
                 <button
                   aria-current={isSelected ? 'true' : undefined}
@@ -173,7 +202,7 @@ export function VocabularyPage() {
                   type="button"
                 >
                   <span className="mr-2 text-xs tabular-nums text-slate-400">{String(videoIndex + 1).padStart(2, '0')}</span>
-                  {title}
+                  {title}{isLocked ? ' · 🔒 Đăng nhập' : ''}
                 </button>
               )
             })}
@@ -185,15 +214,15 @@ export function VocabularyPage() {
             <div className="mb-5 border-b border-slate-200 pb-4">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-cyan-700">Bài học đang chọn</p>
               <h2 className="mt-1 wrap-break-word text-xl font-extrabold text-slate-900">{selectedVideoTitle}</h2>
-              {vocabularies.length > 0 && (
-                <p className="mt-1 text-sm text-slate-500">{vocabularies.length} từ vựng</p>
+              {availableVocabularies.length > 0 && (
+                <p className="mt-1 text-sm text-slate-500">{availableVocabularies.length} từ vựng</p>
               )}
             </div>
           )}
 
           {vocabulariesLoading && <p className="py-10 text-center text-sm text-slate-500">Đang tải từ vựng bài học...</p>}
-          {vocabulariesError && <p className="rounded-lg bg-red-50 p-4 text-sm font-semibold text-red-700">{vocabulariesError}</p>}
-          {!vocabulariesLoading && !vocabulariesError && !vocabularies.length && (
+          {availableVocabulariesError && <p className="rounded-lg bg-red-50 p-4 text-sm font-semibold text-red-700">{availableVocabulariesError}</p>}
+          {!vocabulariesLoading && !availableVocabulariesError && !availableVocabularies.length && (
             <div className="py-12 text-center text-sm text-slate-500">
               {selectedVideoTitle ? 'Bài học này chưa có từ vựng.' : 'Chọn một bài học để bắt đầu luyện tập.'}
             </div>
@@ -222,7 +251,7 @@ export function VocabularyPage() {
 
               <div className="mt-5 flex items-center justify-between text-sm">
                 <p className="font-bold text-slate-700">{mode === 'flip' ? 'Thẻ ghi nhớ' : 'Trắc nghiệm'}</p>
-                <p className="font-semibold tabular-nums text-slate-500">{currentIndex + 1} / {vocabularies.length}</p>
+                <p className="font-semibold tabular-nums text-slate-500">{currentIndex + 1} / {availableVocabularies.length}</p>
               </div>
 
               {mode === 'flip' ? (
@@ -305,7 +334,7 @@ export function VocabularyPage() {
                 </button>
                 <button
                   className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  disabled={currentIndex >= vocabularies.length - 1}
+                  disabled={currentIndex >= availableVocabularies.length - 1}
                   onClick={() => moveTo(currentIndex + 1)}
                   type="button"
                 >
