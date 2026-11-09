@@ -39,3 +39,32 @@ test('signed-in user sees logout instead of login', () => {
   assert.match(html, /Đăng xuất/)
   assert.doesNotMatch(html, /Đăng nhập/)
 })
+
+test('navigation uses the requested order and the public logo', () => {
+  token = null
+  const html = renderLayout()
+  const labels = [
+    'Trang chủ',
+    'Khóa học',
+    'ICE Masterclass: Bứt phá điểm số THPTQG 2027',
+    'Phòng thi',
+    'Luyện đề',
+    'Thi thử',
+    'Học tập',
+    'Bài giảng',
+    'Từ vựng',
+    'Thư viện',
+    'Về chúng tôi',
+  ]
+
+  assert.match(html, /src="\/logo\.jpg"/)
+  assert.match(html, /aria-label="Điều hướng chính"/)
+  const navHtml = html.slice(html.indexOf('<nav'), html.indexOf('</nav>'))
+  assert.equal((navHtml.match(/aria-current="page"/g) ?? []).length, 1)
+  let previousIndex = -1
+  for (const label of labels) {
+    const index = html.indexOf(label)
+    assert.ok(index > previousIndex, `Expected "${label}" after the previous navigation item`)
+    previousIndex = index
+  }
+})
