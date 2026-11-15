@@ -1,0 +1,133 @@
+.consultation-form {
+  border: 1px solid #dce3ee;
+  border-radius: 0.8rem;
+  background: #f7f9fc;
+  padding: clamp(1.3rem, 3vw, 2.25rem);
+  font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.consultation-form-eyebrow {
+  color: #80600d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+}
+
+.consultation-form-heading h3 {
+  margin: 0.65rem 0 0;
+  color: #102b5c;
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.consultation-form-heading p {
+  margin: 0.5rem 0 0 !important;
+  color: #526178;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.consultation-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.1rem;
+  margin-top: 1.75rem;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+
+.consultation-fields label {
+  display: grid;
+  gap: 0.45rem;
+  color: #243f55;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.consultation-course {
+  grid-column: 1 / -1;
+}
+
+.consultation-fields input {
+  width: 100%;
+  min-width: 0;
+  min-height: 3rem;
+  border: 1px solid #ccd7e5;
+  border-radius: 0.4rem;
+  background: #fff;
+  padding: 0.7rem 0.8rem;
+  color: #102b5c;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.consultation-fields input::placeholder {
+  color: #87979f;
+}
+
+.consultation-fields input:focus-visible {
+  outline: 3px solid #f5b82e;
+  outline-offset: 2px;
+}
+
+.consultation-fields input[readonly] {
+  background: #edf2f8;
+  color: #38536e;
+}
+
+.consultation-form .consultation-notice {
+  margin: 1.5rem 0 0;
+  border-left: 3px solid #c5983a;
+  background: #fff8e9;
+  padding: 0.75rem 0.9rem;
+  color: #715326;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.consultation-form .consultation-notice.is-error {
+  border-color: #b91c1c;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.consultation-form .consultation-notice.is-success {
+  border-color: #15803d;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.consultation-form button {
+  display: flex;
+  min-height: 3.25rem;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: #102b5c;
+  padding: 0.85rem 1.15rem;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.consultation-form button:disabled {
+  background: #8794a6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .consultation-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .consultation-course {
+    grid-column: auto;
+  }
+}

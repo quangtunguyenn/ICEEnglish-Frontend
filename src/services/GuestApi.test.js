@@ -9,6 +9,7 @@ let api
 let requests
 let responseBody
 let responseStatus = 200
+let holdProfileResponse
 const originalApiUrl = process.env.VITE_API_BASE_URL
 const originalStorage = globalThis.localStorage
 const storage = new Map([['accessToken', 'student-token'], ['refreshToken', 'refresh-token'], ['currentUser', '{"id":"student"}']])
@@ -26,6 +27,10 @@ before(async () => {
         guestAttempt: request.headers['x-guest-attempt'],
         body: Buffer.concat(chunks).toString(),
       })
+      if (request.url === '/api/v1/auth/profile' && holdProfileResponse) {
+        holdProfileResponse(reply)
+        return
+      }
       reply.writeHead(responseStatus, { 'Content-Type': 'application/json' })
       reply.end(JSON.stringify(responseBody))
     })
@@ -61,6 +66,44 @@ test('guest content requests omit student authorization', async () => {
     authorization: undefined,
     guestAttempt: undefined,
     body: '',
+  })
+
+  test('consultation creation is public and sends the exact payload', async () => {
+    storage.set('accessToken', 'student-token')
+    requests.length = 0
+    responseStatus = 201
+    const payload = { studentFullname: 'Nguyen Van A', bod: 2008, targetGrade: 8.55, phoneNumberRequest: '0901234567' }
+    responseBody = { id: 'request-1', ...payload, dateRequest: '2026-01-02T00:30:00', status: 'NOT_DONE' }
+    assert.deepEqual(await api.createConsultationRequest(payload), responseBody)
+    assert.equal(requests[0].method, 'POST')
+    assert.equal(requests[0].url, '/api/v1/consultation-requests')
+    assert.equal(requests[0].authorization, undefined)
+    assert.deepEqual(JSON.parse(requests[0].body), payload)
+    responseStatus = 200
+    await assert.rejects(api.createConsultationRequest(payload), /Không thể xác nhận/)
+  })
+
+  test('consultation list and status updates use staff authorization and filters', async () => {
+    storage.set('accessToken', 'staff-token')
+    requests.length = 0
+    responseStatus = 200
+    const row = { id: 'request-1', studentFullname: 'A', bod: 2008, targetGrade: 8.5, phoneNumberRequest: '0901234567', dateRequest: '2026-01-02T00:30:00', status: 'DONE' }
+    responseBody = [row]
+    assert.deepEqual(await api.getConsultationRequests({ status: 'DONE', date: '2026-01-02' }), [row])
+    assert.equal(requests[0].url, '/api/v1/consultation-requests?status=DONE&date=2026-01-02')
+    assert.equal(requests[0].authorization, 'Bearer staff-token')
+    responseBody = row
+    assert.deepEqual(await api.updateConsultationStatus('request-1', 'NOT_DONE'), row)
+    assert.equal(requests[1].method, 'PATCH')
+    assert.equal(requests[1].url, '/api/v1/consultation-requests/request-1/status')
+    assert.equal(requests[1].authorization, 'Bearer staff-token')
+    assert.deepEqual(JSON.parse(requests[1].body), { status: 'NOT_DONE' })
+    responseBody = { message: 'invalid' }
+    await assert.rejects(api.getConsultationRequests(), /không hợp lệ/)
+    responseStatus = 403
+    await assert.rejects(api.updateConsultationStatus('request-1', 'DONE'), (error) => error.response.status === 403)
+    responseStatus = 200
+    storage.set('accessToken', 'student-token')
   })
 })
 
@@ -113,6 +156,35 @@ test('logout removes credentials but keeps unrelated browser data', () => {
   assert.equal(storage.has('currentUser'), false)
   assert.equal(storage.get('other-data'), 'preserved')
   assert.equal(api.isGuestUser(), true)
+})
+
+test('a late profile response cannot overwrite a different session', async () => {
+  for (const nextToken of [null, 'new-student-token']) {
+    storage.set('accessToken', 'old-student-token')
+    storage.delete('currentUser')
+    let releaseResponse
+    const requestReceived = new Promise((resolve) => {
+      holdProfileResponse = (reply) => {
+        releaseResponse = () => {
+          reply.writeHead(200, { 'Content-Type': 'application/json' })
+          reply.end(JSON.stringify({ fullName: 'Old Student' }))
+        }
+        resolve()
+      }
+    })
+    const pending = api.getAuthProfile()
+    await requestReceived
+    if (nextToken) {
+      storage.set('accessToken', nextToken)
+      storage.set('currentUser', JSON.stringify({ fullName: 'New Student' }))
+    } else {
+      api.logout()
+    }
+    releaseResponse()
+    await assert.rejects(pending, /Phiên đăng nhập đã thay đổi/)
+    assert.equal(storage.get('currentUser'), nextToken ? '{"fullName":"New Student"}' : undefined)
+    holdProfileResponse = null
+  }
 })
 
 test('reading APIs use separate guest and student routes with direct JSON responses', async () => {

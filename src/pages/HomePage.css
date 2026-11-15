@@ -1,0 +1,383 @@
+html:has(.landing-page) {
+  scroll-padding-top: 5rem;
+}
+
+body:has(.landing-page) footer {
+  margin-top: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.landing-page) {
+    scroll-snap-type: y proximity;
+    scroll-behavior: smooth;
+  }
+
+  .landing-page .hero-section,
+  .landing-page .home-block,
+  .landing-page .aca-section,
+  .landing-page .course-section,
+  .landing-page .final-cta {
+    scroll-snap-align: start;
+  }
+}
+
+.landing-page {
+  --landing-navy: #102b5c;
+  --landing-ink: #10233f;
+  --landing-gold: #f5b82e;
+  overflow: clip;
+  font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.landing-page .hero-section {
+  min-height: min(760px, calc(100svh - 5rem));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(2.5rem, 5vw, 5rem);
+  padding-top: clamp(4rem, 7vw, 6rem);
+  padding-bottom: clamp(4rem, 7vw, 6rem);
+}
+
+.landing-page .hero-section::before {
+  content: none;
+}
+
+.landing-page .eyebrow {
+  color: #80600d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+}
+
+.landing-page .hero-section h1 {
+  font-size: clamp(3rem, 4.5vw, 4.8rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.landing-page .text-gradient,
+.landing-page .course-heading h2 span,
+.landing-page .aca-copy h2 span {
+  background: none;
+  color: #1c427e;
+}
+
+.landing-page .eyebrow-dot {
+  background: var(--landing-gold);
+  box-shadow: 0 0 0 0.28rem #f5b82e25;
+}
+
+.landing-page .primary-button span {
+  color: #f5c955;
+}
+
+.landing-page .secondary-button:hover {
+  border-color: #e2bd65;
+  background: #fffaf0;
+}
+
+.landing-page .hero-subtitle {
+  max-width: 33rem;
+  color: #4e6278;
+  line-height: 1.75;
+}
+
+.landing-page .primary-button,
+.landing-page .secondary-button,
+.landing-page .aca-link {
+  min-height: 3.25rem;
+  border-radius: 0.45rem;
+  font-weight: 650;
+}
+
+.landing-page .hero-highlights {
+  gap: 0.75rem 1.25rem;
+  margin-top: 2.5rem;
+  border-top: 1px solid #dfe8eb;
+  padding-top: 1.25rem;
+  color: #526678;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.landing-page .hero-highlights i {
+  background: transparent;
+  color: #8a640d;
+  font-size: 0.7rem;
+}
+
+.landing-page .features-section {
+  background: #f5f7fb;
+}
+
+.landing-page .section-intro {
+  max-width: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+  gap: 0 3rem;
+  margin-bottom: 3rem;
+  text-align: left;
+}
+
+.landing-page .section-intro .eyebrow {
+  grid-column: 1 / -1;
+}
+
+.landing-page .section-intro h2,
+.landing-page .course-heading h2,
+.landing-page .aca-copy h2,
+.landing-page .final-cta h2 {
+  font-size: clamp(2.3rem, 4vw, 3.65rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.12;
+}
+
+.landing-page .section-intro h2 span {
+  color: #1c427e;
+}
+
+.landing-page .section-intro p,
+.landing-page .course-heading > div:first-child > p,
+.landing-page .aca-copy > p {
+  max-width: 31rem;
+  margin-left: 0 !important;
+  color: #526678;
+}
+
+.landing-page .feature-card {
+  border-color: #dce3ee;
+  border-radius: 0.65rem;
+  box-shadow: none;
+}
+
+.landing-page .feature-card:hover {
+  border-color: #e6c46c;
+  box-shadow: 0 1rem 2.5rem #143c5b10;
+}
+
+.landing-page .feature-card-copy {
+  padding: 1.5rem;
+}
+
+.landing-page .feature-index {
+  color: #80600d;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.landing-page .feature-card h3 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.landing-page .feature-card-copy p {
+  color: #526678;
+  font-size: 0.92rem;
+}
+
+.landing-page .feature-link {
+  color: #173c79;
+  font-weight: 700;
+}
+
+.landing-page .aca-section {
+  background: #edf2f9;
+}
+
+.landing-page .aca-image-wrap,
+.landing-page .aca-weekly-plan > div {
+  border-radius: 0.65rem;
+}
+
+.landing-page .aca-image-wrap {
+  box-shadow: 0 1.25rem 3rem #143c5b12;
+}
+
+.landing-page .aca-weekly-plan strong {
+  color: #102b5c;
+  font-weight: 700;
+}
+
+.landing-page .aca-weekly-plan span,
+.landing-page .aca-copy > .aca-livestream {
+  font-weight: 600;
+}
+
+.landing-page .aca-link {
+  background: #102b5c;
+}
+
+.landing-page .aca-link:hover {
+  background: #173c79;
+}
+
+.landing-page .aca-link:focus-visible {
+  outline: 3px solid #f5b82e;
+  outline-offset: 3px;
+}
+
+.landing-page .course-note {
+  border-radius: 0.65rem;
+  background: linear-gradient(145deg, #1a3e79, #102b5c);
+}
+
+.landing-page .course-note-label {
+  color: #f5c955;
+}
+
+.landing-page .course-progress-line {
+  background: linear-gradient(90deg, #f8d77f, #d69a16);
+  transform: none;
+}
+
+.landing-page .course-stage-number {
+  background: #102b5c;
+  box-shadow: 0 0 0 1px #e6bc50;
+}
+
+.landing-page .course-stage-phase {
+  color: #80600d;
+}
+
+.landing-page .aca-livestream span {
+  color: #be8b13;
+}
+
+.landing-page .course-stage h3 {
+  font-weight: 700;
+}
+
+.landing-page .course-stage p {
+  color: #526678;
+  font-size: 0.88rem;
+}
+
+.landing-page .final-cta {
+  width: 100%;
+  margin: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 85% 15%, #f5b82e1c, transparent 32%),
+    linear-gradient(120deg, #0b1c3b, #102b5c 65%, #1a3e79);
+}
+
+.landing-page .final-cta .eyebrow {
+  color: #f5c955;
+}
+
+.landing-page .final-cta h2 span {
+  background: none;
+  color: #f5c955;
+}
+
+.landing-page .primary-button--light {
+  background: #f5b82e;
+  color: #102b5c;
+}
+
+.landing-page .primary-button--light:hover {
+  background: #f8ca60;
+}
+
+.landing-page .primary-button--light span {
+  color: #102b5c;
+}
+
+.consultation-section {
+  padding: clamp(4rem, 8vw, 7rem) 0;
+}
+
+.consultation-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  gap: clamp(2.5rem, 7vw, 6rem);
+  align-items: start;
+}
+
+.consultation-intro {
+  padding-top: 1rem;
+}
+
+.consultation-intro h2 {
+  max-width: 10em;
+  margin-top: 1rem;
+  color: var(--landing-ink);
+  font-size: clamp(2.3rem, 4vw, 3.65rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.12;
+}
+
+.consultation-intro > p {
+  max-width: 29rem;
+  margin-top: 1.25rem !important;
+  color: #526678;
+  line-height: 1.75;
+}
+
+.consultation-detail {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  max-width: 29rem;
+  margin-top: 1.25rem;
+  border-top: 1px solid #dfe8eb;
+  padding-top: 1.25rem;
+  color: #526678;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.consultation-detail span {
+  color: #80600d;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  html:has(.landing-page) {
+    scroll-padding-top: 4.5rem;
+  }
+
+  .landing-page .hero-section {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .landing-page .hero-section::before {
+    top: 48%;
+    right: -20%;
+    width: 110%;
+    height: 52%;
+  }
+
+  .landing-page .hero-section h1 {
+    font-size: clamp(2.65rem, 9.5vw, 4.2rem);
+  }
+
+  .landing-page .section-intro {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .landing-page .section-intro .eyebrow {
+    grid-column: auto;
+  }
+
+  .landing-page .feature-card-copy {
+    padding: 1.25rem;
+  }
+
+  .consultation-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-page .aca-link {
+    transition: none;
+  }
+}

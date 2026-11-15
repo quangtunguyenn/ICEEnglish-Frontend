@@ -4,6 +4,8 @@ import { ExamTakeView } from '../components/ExamTakeView'
 import { useExamTimer } from '../hooks/useExamTimer'
 import { getApiErrorMessage, getExam, setActivePart, startExam, submitExam } from '../services/api'
 import { applyDisplayNumbers } from '../utils/examNumbering'
+import { getExamCandidate, getExamStartedAt } from '../utils/examHeader'
+import { exitFullscreenIfNeeded } from '../utils/fullscreen'
 import { readMockDraft, removeMockDraft, writeMockDraft } from '../utils/mockDraft'
 import { getServerRemainingMs } from '../utils/serverTime'
 
@@ -55,6 +57,7 @@ export function ExamTakePage() {
   const [remainingSeconds, setRemainingSeconds] = useState(0)
   const [mockDraft, setMockDraft] = useState(null)
   const [mockExpired, setMockExpired] = useState(false)
+  const [examStartedAt, setExamStartedAt] = useState('')
   const [markedQuestions, setMarkedQuestions] = useState({})
   const [questionPositions, setQuestionPositions] = useState({})
   const timerDeadlineRef = useRef(null)
@@ -67,6 +70,7 @@ export function ExamTakePage() {
   const activeQuestionIndex = questionPositions[activePartKey] ?? 0
   const questionRefs = useRef({})
   const { getPartTimes, partTimes, restorePartTimes } = useExamTimer(activePart?.id)
+  const candidate = useMemo(() => getExamCandidate(), [])
   const isMock = isMockRoute || String(exam?.mode || '').toUpperCase() === 'MOCK'
   const isGeneralExam = !isMock
 
@@ -88,6 +92,7 @@ export function ExamTakePage() {
     let active = true
     if (!loadRequestRef.current || loadRequestRef.current.examId !== examId || loadRequestRef.current.isMockRoute !== isMockRoute) {
       const request = (async () => {
+        const requestStartedAt = new Date().toISOString()
         let accountId
         let savedMock
         if (isMockRoute) {
@@ -115,7 +120,14 @@ export function ExamTakePage() {
           mode: submission.mode || examDetail.mode,
           submissionId,
         }
-        if (!isMockRoute) return { loadedExam }
+        const attemptStartedAt = getExamStartedAt(
+          submission.startedAt,
+          submission.started_at,
+          submission.createdAt,
+          submission.created_at,
+          requestStartedAt,
+        )
+        if (!isMockRoute) return { loadedExam, startedAt: attemptStartedAt }
 
         const duration = getDurationSeconds(loadedExam)
         const remainingMs = getServerRemainingMs(submission, duration * 1000)
@@ -124,24 +136,31 @@ export function ExamTakePage() {
         // A draft belongs to one attempt; if the server resumed a different one, start clean.
         const usableDraft = savedMock && String(savedMock.submissionId) === String(submissionId) ? savedMock : null
         const expiresAtMs = Date.parse(submission.expiresAt)
-        const draft = usableDraft || {
-          version: 1,
-          accountId: String(accountId),
-          examId: String(examId),
-          submissionId: String(submissionId),
-          deadline: Number.isFinite(expiresAtMs) ? expiresAtMs : Date.now() + remainingMs,
-          answers: {},
-          partTimes: {},
-        }
-        if (!usableDraft) writeMockDraft(localStorage, draft)
-        return { loadedExam, draft, deadlineAt, restored: Boolean(usableDraft) }
+        const draft = usableDraft
+          ? {
+              ...usableDraft,
+              startedAt: getExamStartedAt(usableDraft.startedAt, attemptStartedAt),
+            }
+          : {
+              version: 1,
+              accountId: String(accountId),
+              examId: String(examId),
+              submissionId: String(submissionId),
+              startedAt: attemptStartedAt,
+              deadline: Number.isFinite(expiresAtMs) ? expiresAtMs : Date.now() + remainingMs,
+              answers: {},
+              partTimes: {},
+            }
+        if (!usableDraft || !usableDraft.startedAt) writeMockDraft(localStorage, draft)
+        return { loadedExam, draft, deadlineAt, restored: Boolean(usableDraft), startedAt: draft.startedAt }
       })()
       loadRequestRef.current = { examId, isMockRoute, request }
     }
 
     loadRequestRef.current.request
-      .then(({ loadedExam, draft, deadlineAt, restored }) => {
+      .then(({ loadedExam, draft, deadlineAt, restored, startedAt }) => {
         if (!active) return
+        setExamStartedAt(startedAt)
         if (draft) {
           setAnswers(draft.answers)
           restorePartTimes(draft.partTimes)
@@ -433,12 +452,14 @@ export function ExamTakePage() {
     let result
     try {
       result = await submitExam(payload)
+      if (!result || typeof result !== 'object') throw new Error('Dữ liệu kết quả bài thi không hợp lệ.')
     } catch (requestError) {
       setError(`${getApiErrorMessage(requestError, 'Không thể xác nhận nộp bài.')} Bản lưu trên máy được giữ lại; hãy kiểm tra kết quả hoặc thử nộp lại.`)
       submitInFlightRef.current = false
       setSubmitting(false)
       return
     }
+    result = { ...result, resultMode: isMock ? 'mock' : 'practice' }
 
     const submissionWarnings = []
     if (isGeneralExam) {
@@ -463,6 +484,11 @@ export function ExamTakePage() {
       sessionStorage.setItem(`exam-result:${result.submissionId}`, JSON.stringify(result))
     } catch {
       submissionWarnings.push('Không thể lưu kết quả trong phiên trình duyệt; hãy giữ trang kết quả mở.')
+    }
+    try {
+      await exitFullscreenIfNeeded()
+    } catch {
+      submissionWarnings.push('Đã nộp bài nhưng trình duyệt không thể thoát chế độ toàn màn hình.')
     }
     navigate(`/ket-qua/${result.submissionId}`, { state: { result, submissionWarnings } })
   }, [answers, exam, isGeneralExam, isMock, mockDraft, navigate])
@@ -508,10 +534,11 @@ export function ExamTakePage() {
     <ExamTakeView
       activePart={activePart} activePartKey={activePartKey} answers={answers}
       answeredCount={answeredCount} chooseAnswer={chooseAnswer} error={error} exam={exam}
+      candidateName={candidate.fullName} candidateSbd={candidate.studentIrn} examStartedAt={examStartedAt}
       goToNextPart={goToNextPart} goToPreviousPart={goToPreviousPart} goToQuestion={goToQuestion}
       handleSaveDraft={handleSaveDraft} handleSubmit={handleSubmit} hasUnsavedChanges={hasUnsavedChanges}
       isGeneralExam={isGeneralExam} isMock={isMock} markedQuestions={markedQuestions}
-      mockExpired={mockExpired} partIndex={partIndex} partTimes={partTimes} questionCount={questionCount}
+      mockExpired={mockExpired} partIndex={partIndex} questionCount={questionCount}
       questionItems={questionItems} questionRefs={questionRefs} remainingSeconds={remainingSeconds}
       saveStatus={saveStatus} submitting={submitting} timerStorageWarning={timerStorageWarning} toggleMark={toggleMark}
     />

@@ -5,6 +5,7 @@ import { getApiErrorMessage, getExamAnswersRevealed, getSubmissionPartLogs } fro
 import { buildNumberMap, renumberText } from '../utils/examNumbering'
 import { formatInlineText, questionToHtml, textToHtml } from '../utils/textFormatting'
 import { formatPracticeSubmissionDate } from '../utils/practiceHistory'
+import { ResultOverview } from '../components/ResultOverview'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -126,12 +127,16 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
   }, [guest, requiresLogin, submissionId])
 
   const percentage = useMemo(() => {
-    if (!result?.totalQuestions) return 0
+    if (!Number.isFinite(result?.totalCorrect) || !Number.isFinite(result?.totalQuestions) || result.totalQuestions <= 0) return null
     return Math.round((result.totalCorrect / result.totalQuestions) * 100)
   }, [result])
   const currentAnswerReveal = answerReveal?.examId === examId ? answerReveal : null
   const answersRevealed = guest || currentAnswerReveal?.revealed === true
   const answerParts = useMemo(() => groupQuestionsByPart(result), [result])
+  const isMock = result?.resultMode === 'mock' || String(result?.mode || '').toUpperCase() === 'MOCK'
+  const isHomework = result?.resultMode === 'homework' || location.state?.returnTo === '/video'
+  const backTo = returnTo || location.state?.returnTo || (isHomework ? '/video' : isMock ? '/thi-thu' : '/luyen-de')
+  const backLabel = returnLabel || (isHomework || location.state?.returnTo ? 'Quay lại video' : isMock ? 'Về danh sách thi thử' : 'Về danh sách luyện đề')
 
   if (requiresLogin) {
     return <Navigate replace to="/dang-nhap" state={{ from: { pathname: location.pathname, search: location.search } }} />
@@ -142,31 +147,28 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
       <div className="mx-auto max-w-3xl px-6 py-20 text-center">
         <h1 className="text-2xl font-extrabold text-slate-900">Không tìm thấy kết quả</h1>
         <p className="mt-3 text-slate-500">Kết quả có thể đã hết phiên lưu trữ.</p>
-        <Link className="mt-6 inline-flex rounded-lg bg-cyan-500 px-5 py-3 font-bold text-slate-950" to={location.state?.returnTo || '/luyen-de'}>
-          {location.state?.returnTo ? 'Quay lại video' : 'Về danh sách luyện đề'}
+        <Link className="mt-6 inline-flex rounded-lg bg-ice-navy px-5 py-3 font-bold text-white" to={backTo}>
+          {backLabel}
         </Link>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-12">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-600">Kết quả bài thi</p>
-          <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-slate-900">
-            {result.examTitle || 'Bài luyện đề'}
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Nộp lúc: {resultOverride ? formatPracticeSubmissionDate(result.submittedAt) : formatDate(result.submittedAt)}
-          </p>
-        </div>
-        <div className="rounded-2xl bg-slate-900 px-8 py-5 text-center text-white">
-          <p className="text-sm text-slate-300">Điểm số</p>
-          <p className="mt-1 text-4xl font-black text-cyan-400">{result.score ?? 0}</p>
-          <p className="text-xs text-slate-400">{percentage}%</p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1400px] px-4 pb-24 pt-6 sm:px-6 lg:py-8">
+      <ResultOverview
+        backLabel={backLabel}
+        backTo={backTo}
+        description={<>{result.examTitle || (isHomework ? 'Bài tập video' : isMock ? 'Bài thi thử' : 'Bài luyện đề')} · Nộp lúc: {resultOverride ? formatPracticeSubmissionDate(result.submittedAt) : formatDate(result.submittedAt)}</>}
+        eyebrow={isHomework ? 'Bài tập video' : isMock ? 'Thi thử' : 'Luyện đề'}
+        stats={[
+          { label: 'Điểm số', value: result.score ?? '—', caption: percentage == null ? null : `${percentage}% câu trả lời đúng`, primary: true },
+          { label: 'Tổng số câu', value: result.totalQuestions ?? 0 },
+          { label: 'Câu đúng', value: result.totalCorrect ?? 0, valueClass: 'text-emerald-700' },
+          { label: 'Câu sai', value: result.totalIncorrect ?? 0, valueClass: 'text-red-700' },
+        ]}
+        title={isHomework ? 'KẾT QUẢ BÀI TẬP' : isMock ? 'KẾT QUẢ THI THỬ' : 'KẾT QUẢ BÀI LÀM'}
+      />
 
       {location.state?.submissionWarnings?.map((warning) => (
         <p className="mt-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-800" key={warning}>
@@ -174,16 +176,10 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
         </p>
       ))}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        <SummaryCard label="Tổng số câu" value={result.totalQuestions ?? 0} />
-        <SummaryCard label="Câu đúng" value={result.totalCorrect ?? 0} valueClass="text-emerald-600" />
-        <SummaryCard label="Câu sai" value={result.totalIncorrect ?? 0} valueClass="text-red-600" />
-      </div>
-
       {guest && (result.answerUrl || result.answerUrlError) && (
-        <section className="mt-6 rounded-xl border border-cyan-100 bg-cyan-50 p-5">
+        <section className="mt-6 rounded-2xl border border-ice-gold/40 bg-ice-gold-50 p-5">
           {result.answerUrl && (
-            <a className="inline-flex rounded-lg bg-cyan-700 px-4 py-2 font-bold text-white hover:bg-cyan-800" href={result.answerUrl} rel="noreferrer" target="_blank">
+            <a className="inline-flex rounded-lg bg-ice-navy px-4 py-2 font-bold text-white hover:bg-ice-navy/90" href={result.answerUrl} rel="noreferrer" target="_blank">
               Xem đáp án chi tiết
             </a>
           )}
@@ -192,10 +188,13 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
       )}
 
       <section className="mt-10">
-        <h2 className="text-2xl font-extrabold text-slate-900">Thời gian theo từng Part</h2>
+        <h2 className="font-gf text-2xl font-bold text-ice-navy">Thời gian theo từng Part</h2>
         {partLogsLoading && <p className="mt-4 text-sm text-slate-500">Đang tải thời gian làm bài...</p>}
         {partLogsError && (
           <p className="mt-4 rounded-lg bg-red-50 p-4 text-sm text-red-600">{partLogsError}</p>
+        )}
+        {!partLogsLoading && !partLogsError && partTimeLogs.length === 0 && (
+          <p className="mt-4 text-sm text-slate-500">Chưa có dữ liệu thời gian cho bài làm này.</p>
         )}
         <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[...partTimeLogs]
@@ -203,7 +202,7 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
             .map((part) => (
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" key={part.partId}>
               <p className="font-bold text-slate-900">{part.partName || 'Part'}</p>
-              <p className="mt-2 text-2xl font-extrabold text-cyan-600">
+              <p className="mt-2 text-2xl font-extrabold text-ice-navy">
                 {formatDuration(part.timeSpentSeconds)}
               </p>
             </div>
@@ -212,7 +211,7 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-2xl font-extrabold text-slate-900">
+        <h2 className="font-gf text-2xl font-bold text-ice-navy">
           {answersRevealed ? 'Chi tiết đáp án' : 'Chi tiết câu trả lời'}
         </h2>
         {!guest && !currentAnswerReveal && examId && (
@@ -223,11 +222,12 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
             {currentAnswerReveal.error || 'Đề thi chưa công bố đáp án. Bạn vẫn có thể xem lựa chọn và video ôn tập nếu có.'}
           </p>
         )}
-        {!examId && (
+        {!examId && !answersRevealed && (
           <p className="mt-3 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
             Không xác định được đề thi nên đáp án được ẩn.
           </p>
         )}
+        {answerParts.length === 0 && <p className="mt-3 text-sm text-slate-500">Chưa có chi tiết câu trả lời.</p>}
         <div className="mt-4 space-y-8">
           {answerParts.map((part) => (
             <section className="space-y-4" key={part.key}>
@@ -238,36 +238,23 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
                   key={question.questionId}
                   question={question}
                   showAnswer={answersRevealed}
-                  showVideo={!location.state?.hideVideos}
+                  showVideo={!location.state?.hideVideos && !isHomework}
                 />
               ))}
             </section>
           ))}
         </div>
       </section>
-
-      <Link className="mt-10 inline-flex rounded-lg bg-slate-900 px-5 py-3 font-bold text-white hover:bg-slate-700" to={returnTo || location.state?.returnTo || '/luyen-de'}>
-        {returnLabel || (location.state?.returnTo ? 'Quay lại video' : 'Làm bài khác')}
-      </Link>
-    </div>
-  )
-}
-
-function SummaryCard({ label, value, valueClass = 'text-slate-900' }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm font-semibold text-slate-500">{label}</p>
-      <p className={`mt-2 text-3xl font-black ${valueClass}`}>{value}</p>
     </div>
   )
 }
 
 function PartPassage({ part }) {
   return (
-    <article className="rounded-xl border border-cyan-200 bg-cyan-50/50 p-5">
+    <article className="rounded-xl border border-ice-gold/40 bg-ice-gold-50/50 p-5">
       <div className={part.translate ? 'grid gap-5 lg:grid-cols-2' : ''}>
         <div>
-          <h4 className="text-sm font-bold text-cyan-700">{part.translate ? 'Nguyên văn' : 'Bài đọc'}</h4>
+          <h4 className="text-sm font-bold text-ice-navy">{part.translate ? 'Nguyên văn' : 'Bài đọc'}</h4>
           <div
             className="mt-2 text-sm leading-7 text-slate-700 [&_h2]:text-center [&_h2]:font-bold [&_h2]:uppercase [&_p]:mb-3"
             dangerouslySetInnerHTML={{ __html: textToHtml(part.passageText) }}
@@ -317,7 +304,7 @@ function QuestionResult({ question, showAnswer, showVideo = true }) {
           const tone = correct
             ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
             : selected
-              ? showAnswer ? 'border-red-300 bg-red-50 text-red-900' : 'border-cyan-300 bg-cyan-50 text-cyan-900'
+              ? showAnswer ? 'border-red-300 bg-red-50 text-red-900' : 'border-ice-navy/30 bg-ice-navy/5 text-ice-navy'
               : 'border-slate-200 text-slate-700'
 
           return (
@@ -348,7 +335,7 @@ function QuestionResult({ question, showAnswer, showVideo = true }) {
       )}
       {video && hasVideoId && (
         <Link
-          className="mt-4 inline-flex items-center rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-bold text-cyan-800 hover:border-cyan-400 hover:bg-cyan-100"
+          className="mt-4 inline-flex items-center rounded-lg border border-ice-navy/20 bg-ice-navy/5 px-4 py-2 text-sm font-bold text-ice-navy hover:border-ice-navy/40 hover:bg-ice-navy/10"
           state={{ selectedTitle: videoTitle }}
           to={`/video?videoId=${encodeURIComponent(videoId)}`}
         >

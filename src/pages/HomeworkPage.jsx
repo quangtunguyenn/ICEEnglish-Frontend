@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ExamQuestion } from '../components/ExamQuestion'
+import { ExamIdentityBar } from '../components/ExamIdentityBar'
+import { ResultOverview } from '../components/ResultOverview'
 import { PassageViewer } from '../components/PassageViewer'
 import { useExamTimer } from '../hooks/useExamTimer'
 import { useGuestMode } from '../hooks/useGuestMode'
@@ -16,6 +18,8 @@ import {
   submitGuestHomework,
   submitVideoHomework,
 } from '../services/api'
+import { exitFullscreenIfNeeded } from '../utils/fullscreen'
+import { getExamCandidate, getExamStartedAt } from '../utils/examHeader'
 
 function getHomeworkParts(homework) {
   const source = Array.isArray(homework)
@@ -72,11 +76,13 @@ export function HomeworkPage() {
   const [answerUrl, setAnswerUrl] = useState('')
   const [answerLoading, setAnswerLoading] = useState(false)
   const [answerError, setAnswerError] = useState('')
+  const [examStartedAt, setExamStartedAt] = useState('')
   const [securityWarning, setSecurityWarning] = useState(false)
   const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(false)
   const startRequestedForRef = useRef(null)
   const fullscreenStartedRef = useRef(false)
   const questionRefs = useRef({})
+  const candidate = useMemo(() => getExamCandidate(guest), [guest])
 
   useEffect(() => {
     if (!guest && location.state?.homework) return
@@ -98,6 +104,7 @@ export function HomeworkPage() {
     startRequestedForRef.current = examId
     setLoading(true)
 
+    const requestStartedAt = new Date().toISOString()
     const request = guest ? startGuestHomework(videoId) : startVideoHomework(videoId)
     request
       .then((startedSubmission) => {
@@ -105,7 +112,15 @@ export function HomeworkPage() {
         if (!submissionId) {
           throw new Error('Backend bắt đầu bài tập nhưng không trả về submissionId.')
         }
-        setSubmission({ ...startedSubmission, submissionId, examId })
+        const startedAt = getExamStartedAt(
+          startedSubmission.startedAt,
+          startedSubmission.started_at,
+          startedSubmission.createdAt,
+          startedSubmission.created_at,
+          requestStartedAt,
+        )
+        setSubmission({ ...startedSubmission, submissionId, examId, startedAt })
+        setExamStartedAt(startedAt)
       })
       .catch((requestError) => setError(
         getApiErrorMessage(requestError, 'Không thể bắt đầu bài tập. Vui lòng thử lại.'),
@@ -115,7 +130,6 @@ export function HomeworkPage() {
 
   const parts = useMemo(() => getHomeworkParts(homework), [homework])
   const activePart = parts[partIndex]
-  const { partTimes } = useExamTimer(activePart?.id)
   const questionItems = useMemo(
     () => parts.flatMap((part, currentPartIndex) =>
       part.questions.map((question) => ({ ...question, partIndex: currentPartIndex })),
@@ -230,8 +244,13 @@ export function HomeworkPage() {
           }
         })
         .finally(() => setAnswerLoading(false))
-      if (document.fullscreenElement) {
-        await document.exitFullscreen().catch(() => {})
+      try {
+        await exitFullscreenIfNeeded()
+      } catch {
+        setAnswerError((current) => [
+          current,
+          'Đã nộp bài nhưng trình duyệt không thể thoát chế độ toàn màn hình.',
+        ].filter(Boolean).join(' '))
       }
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'Nộp bài tập thất bại. Vui lòng thử lại.'))
@@ -240,7 +259,18 @@ export function HomeworkPage() {
     }
   }
 
-  if (loading) {
+  if (error && !submission && !result) {
+    return (
+      <div className="mx-auto max-w-3xl p-8">
+        <p className="rounded-lg bg-red-50 p-4 text-red-700" role="alert">{error}</p>
+        <button className="mt-4 rounded bg-blue-600 px-4 py-2 font-semibold text-white" onClick={() => navigate('/video', { state: { selectedTitle: location.state?.title } })} type="button">
+          Quay lại video
+        </button>
+      </div>
+    )
+  }
+
+  if (loading || (getExamId(homework) && !submission)) {
     return <div className="p-12 text-center text-slate-600">Đang tải bài tập...</div>
   }
 
@@ -268,32 +298,35 @@ export function HomeworkPage() {
 
   if (result) {
     return (
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wider text-cyan-700">Bài tập video</p>
-            <h1 className="mt-1 text-2xl font-extrabold text-slate-900">{location.state?.title || homework?.title || 'Kết quả bài tập'}</h1>
-          </div>
-          <button className="rounded-lg bg-slate-900 px-4 py-2 font-bold text-white" onClick={() => navigate('/video', { state: { selectedTitle: location.state?.title } })} type="button">
-            Quay lại video
-          </button>
-        </header>
-        <section className="mb-6 rounded-2xl border border-cyan-100 bg-cyan-50 p-5">
-          <h2 className="font-bold text-slate-900">Đáp án chi tiết</h2>
+      <main className="mx-auto max-w-[1400px] px-4 pb-24 pt-6 sm:px-6 lg:py-8">
+        <ResultOverview
+          backLabel="Quay lại video"
+          backState={{ selectedTitle: location.state?.title }}
+          backTo="/video"
+          description={location.state?.title || homework?.title || 'Xem lại kết quả và đáp án bài tập của bạn.'}
+          eyebrow="Bài tập video"
+          stats={[
+            ...(result.score != null ? [{ label: 'Điểm số', value: result.score, primary: true }] : []),
+            { label: 'Tổng số câu', value: result.totalQuestions ?? questionItems.length },
+            { label: 'Câu đúng', value: result.totalCorrect ?? 0, valueClass: 'text-emerald-700' },
+            { label: 'Câu sai', value: result.totalIncorrect ?? 0, valueClass: 'text-red-700' },
+          ]}
+          title="KẾT QUẢ BÀI TẬP"
+        />
+        <section className="mt-8 rounded-2xl border border-ice-gold/40 bg-ice-gold-50 p-5">
+          <h2 className="font-gf text-xl font-bold text-ice-navy">Đáp án chi tiết</h2>
           {answerLoading && <p className="mt-2 text-sm text-slate-600">Đang tải liên kết đáp án...</p>}
           {answerUrl && (
-            <a className="mt-3 inline-flex rounded-lg bg-cyan-600 px-4 py-2 font-bold text-white hover:bg-cyan-700" href={answerUrl} rel="noreferrer" target="_blank">
+            <a className="mt-3 inline-flex rounded-lg bg-ice-navy px-4 py-2 font-bold text-white hover:bg-ice-navy/90" href={answerUrl} rel="noreferrer" target="_blank">
               Xem đáp án chi tiết
             </a>
           )}
           {answerError && <p className="mt-2 text-sm font-semibold text-red-700">{answerError}</p>}
+          {!answerLoading && !answerUrl && !answerError && <p className="mt-2 text-sm text-slate-600">Chưa có liên kết đáp án cho bài tập này.</p>}
         </section>
-        <section className="space-y-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <ResultStat label="Tổng câu" value={result.totalQuestions ?? questionItems.length} />
-            <ResultStat label="Câu đúng" value={result.totalCorrect ?? 0} />
-            <ResultStat label="Câu sai" value={result.totalIncorrect ?? 0} />
-          </div>
+        <section className="mt-10 space-y-5">
+          <h2 className="font-gf text-2xl font-bold text-ice-navy">Chi tiết câu trả lời</h2>
+          {!result.details?.length && <p className="text-sm text-slate-500">Chưa có chi tiết câu trả lời.</p>}
           <div className="space-y-3">
             {(result.details || []).map((detail, index) => (
               <article className="rounded-xl border border-slate-200 bg-white p-4" key={detail.questionId || index}>
@@ -339,26 +372,26 @@ export function HomeworkPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-73px)] min-h-155 flex-col overflow-hidden bg-white text-slate-700">
-      <header className="grid h-11 shrink-0 grid-cols-[auto_1fr] items-center border-t-4 border-t-blue-900 border-b border-b-slate-200 bg-white px-4 text-xs">
-        <button className="justify-self-start font-semibold text-blue-700 hover:underline" onClick={() => navigate('/video', { state: { selectedTitle: location.state?.title } })} type="button">
+    <div className="flex h-[calc(100vh-73px)] min-h-155 flex-col overflow-hidden bg-white text-slate-700 [:fullscreen_&]:h-screen">
+      <ExamIdentityBar candidateName={candidate.fullName} candidateSbd={candidate.studentIrn} examStartedAt={examStartedAt} showIdentity={false}>
+        <span className="whitespace-nowrap text-xs font-bold text-white">
+          Số câu đã trả lời: <b className="text-emerald-300">{answeredCount}</b> / {questionItems.length}
+        </span>
+        <HomeworkPartTimer partId={activePart.id} />
+        <button
+          className="rounded bg-white px-4 py-1.5 font-semibold text-[#102b5c] hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!questionItems.length || submitting || !submission}
+          onClick={handleSubmit}
+          type="button"
+        >
+          {submitting ? 'Đang nộp...' : 'Nộp bài'}
+        </button>
+      </ExamIdentityBar>
+      <div className="flex min-h-11 shrink-0 items-center border-b border-slate-200 bg-white px-4 py-2 text-xs [:fullscreen_&]:hidden">
+        <button className="font-semibold text-blue-700 hover:underline" onClick={() => navigate('/video', { state: { selectedTitle: location.state?.title } })} type="button">
           ← Video bài giảng
         </button>
-        <div className="ml-auto flex items-center gap-3">
-          <span className="font-bold text-slate-700">Số câu đã trả lời: <b className="text-green-600">{answeredCount}</b> / {questionItems.length}</span>
-          <span className="font-mono font-bold text-slate-700">
-            {Math.floor((partTimes[activePart.id] || 0) / 60).toString().padStart(2, '0')}:{((partTimes[activePart.id] || 0) % 60).toString().padStart(2, '0')}
-          </span>
-          <button
-            className="rounded bg-blue-500 px-4 py-1.5 font-semibold text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={!questionItems.length || submitting || !submission}
-            onClick={handleSubmit}
-            type="button"
-          >
-            {submitting ? 'Đang nộp...' : 'Nộp bài'}
-          </button>
-        </div>
-      </header>
+      </div>
       <main className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-slate-300 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:divide-x lg:divide-y-0">
         <PassageViewer
           key={activePart.id}
@@ -441,11 +474,17 @@ export function HomeworkPage() {
   )
 }
 
-function ResultStat({ label, value }) {
+function HomeworkPartTimer({ partId }) {
+  const { partTimes } = useExamTimer(partId)
+  const seconds = partTimes[partId] || 0
+
   return (
-    <div className="rounded-xl bg-white p-3 text-center">
-      <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-black text-slate-900">{value}</p>
-    </div>
+    <span aria-label="Thời gian làm bài" className="flex items-center gap-1.5 whitespace-nowrap font-mono font-bold text-white" role="timer">
+      <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {Math.floor(seconds / 60).toString().padStart(2, '0')}:{(seconds % 60).toString().padStart(2, '0')}
+    </span>
   )
 }

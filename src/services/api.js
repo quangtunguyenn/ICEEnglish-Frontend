@@ -60,10 +60,11 @@ api.interceptors.response.use(
       error.response?.data?.message,
       error.response?.data?.error,
     ].filter(Boolean).join(' ').toLocaleLowerCase()
-    const invalidAuthentication =
-      (status === 401 || status === 403) &&
+    const invalidAuthentication = status === 401 || (
+      status === 403 &&
       /(token|user\s*\/\s*role|user or role)/i.test(message) &&
       /(thiếu|sai|hết hạn|không hợp lệ|invalid|expired|missing|unauthorized)/i.test(message)
+    )
 
     const token = localStorage.getItem('accessToken')
     if (invalidAuthentication && token && !error.config?.skipAuth &&
@@ -99,7 +100,11 @@ export async function loginStudent(credentials) {
 }
 
 export async function getAuthProfile() {
+  const token = localStorage.getItem('accessToken')
   const { data } = await api.get('/api/v1/auth/profile')
+  if (localStorage.getItem('accessToken') !== token) {
+    throw new Error('Phiên đăng nhập đã thay đổi. Vui lòng thử lại.')
+  }
   const profile = data?.data || data?.result || data
   localStorage.setItem('currentUser', JSON.stringify(profile))
   return profile
@@ -108,6 +113,45 @@ export async function getAuthProfile() {
 export async function createStudent(payload) {
   const { data } = await api.post('/api/v1/auth/students', payload)
   return data?.data || data?.result || data
+}
+
+export async function getAdminStudents(params = {}) {
+  const { data } = await api.get('/api/v1/admin/students', { params })
+  if (!Array.isArray(data) || data.some((student) =>
+    !student || typeof student.id !== 'string' || typeof student.username !== 'string' ||
+    typeof student.isActive !== 'boolean',
+  )) throw new Error('Dữ liệu danh sách học sinh không hợp lệ.')
+  return data
+}
+
+export async function setStudentActive(id, isActive) {
+  const { data } = await api.patch(`/api/v1/admin/students/${encodeURIComponent(id)}/is-active`, { isActive })
+  if (!data || data.id !== id || data.isActive !== isActive) {
+    throw new Error('Không thể xác nhận trạng thái học sinh. Vui lòng tải lại danh sách.')
+  }
+  return data
+}
+
+export async function createConsultationRequest(payload) {
+  const { data, status } = await api.post('/api/v1/consultation-requests', payload, { skipAuth: true })
+  if (status !== 201) throw new Error('Không thể xác nhận yêu cầu đã được lưu. Vui lòng liên hệ ICE English trước khi gửi lại.')
+  return data
+}
+
+export async function getConsultationRequests(params = {}) {
+  const { data } = await api.get('/api/v1/consultation-requests', { params })
+  if (!Array.isArray(data) || data.some((row) =>
+    !row || typeof row.id !== 'string' || typeof row.studentFullname !== 'string' ||
+    !Number.isInteger(row.bod) || typeof row.targetGrade !== 'number' ||
+    typeof row.phoneNumberRequest !== 'string' || typeof row.dateRequest !== 'string' ||
+    !['NOT_DONE', 'DONE'].includes(row.status),
+  )) throw new Error('Dữ liệu danh sách tư vấn không hợp lệ.')
+  return data
+}
+
+export async function updateConsultationStatus(id, status) {
+  const { data } = await api.patch(`/api/v1/consultation-requests/${encodeURIComponent(id)}/status`, { status })
+  return data
 }
 
 export async function uploadLearningBundle(file) {

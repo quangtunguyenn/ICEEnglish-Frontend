@@ -11,6 +11,8 @@ import {
   submitGuestExam,
 } from '../services/api'
 import { applyDisplayNumbers } from '../utils/examNumbering'
+import { getExamCandidate, getExamStartedAt } from '../utils/examHeader'
+import { exitFullscreenIfNeeded } from '../utils/fullscreen'
 import { getServerRemainingMs } from '../utils/serverTime'
 
 function getGuestAttemptKey(examId) {
@@ -47,6 +49,7 @@ export function GuestExamTakePage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [retry, setRetry] = useState(0)
   const [remainingSeconds, setRemainingSeconds] = useState(0)
+  const [examStartedAt, setExamStartedAt] = useState('')
   const [markedQuestions, setMarkedQuestions] = useState({})
   const [questionPositions, setQuestionPositions] = useState({})
   const timerDeadlineRef = useRef(null)
@@ -56,7 +59,8 @@ export function GuestExamTakePage() {
   const questionRefs = useRef({})
   const activePart = exam?.parts?.[partIndex]
   const activePartKey = activePart?.id || activePart?.partId || String(partIndex)
-  const { partTimes } = useExamTimer(activePart?.id)
+  useExamTimer(activePart?.id)
+  const candidate = useMemo(() => getExamCandidate(true), [])
   const isMock = isMockRoute || String(exam?.mode || '').toUpperCase() === 'MOCK'
 
   useEffect(() => {
@@ -72,6 +76,7 @@ export function GuestExamTakePage() {
       autoSubmittedRef.current = false
       try {
         const saved = retry === 0 ? readGuestAttempt(examId) : null
+        const requestStartedAt = new Date().toISOString()
         let started
         try {
           const requestKey = `${examId}:${retry}`
@@ -104,6 +109,14 @@ export function GuestExamTakePage() {
           mode: started.mode || detail.mode,
           examId: detail.examId || started.examId || examId,
         }
+        const startedAt = getExamStartedAt(
+          saved?.submissionId === attemptId ? saved.startedAt : null,
+          started.startedAt,
+          started.started_at,
+          started.createdAt,
+          started.created_at,
+          requestStartedAt,
+        )
         if (isMockRoute || String(loadedExam.mode).toUpperCase() === 'MOCK') {
           if (!Number.isFinite(Date.parse(started?.serverNow)) || !Number.isFinite(Date.parse(started?.expiresAt))) {
             throw new Error('Đề thi thử không có thời lượng hợp lệ.')
@@ -114,12 +127,13 @@ export function GuestExamTakePage() {
         }
         setSubmissionId(attemptId)
         setExam(loadedExam)
+        setExamStartedAt(startedAt)
         const restoredAnswers = saved?.submissionId === attemptId ? saved.answers : {}
         setAnswers(restoredAnswers)
         try {
           sessionStorage.setItem(
             getGuestAttemptKey(examId),
-            JSON.stringify({ submissionId: attemptId, answers: restoredAnswers }),
+            JSON.stringify({ submissionId: attemptId, answers: restoredAnswers, startedAt }),
           )
           if (saved?.submissionId === attemptId) {
             setSaveStatus({ error: false, message: 'Đã khôi phục câu trả lời tạm thời trên trình duyệt này.' })
@@ -194,7 +208,7 @@ export function GuestExamTakePage() {
           answerUrlError = getApiErrorMessage(answerError, 'Không thể tải liên kết đáp án.')
         }
       }
-      const guestResult = { ...result, guest: true, answerUrl, answerUrlError }
+      const guestResult = { ...result, guest: true, answerUrl, answerUrlError, resultMode: isMock ? 'mock' : 'practice' }
       try {
         sessionStorage.removeItem(getGuestAttemptKey(examId))
       } catch {
@@ -205,14 +219,20 @@ export function GuestExamTakePage() {
       } catch {
         setWarning('Đã nộp bài; kết quả chỉ còn trên trang hiện tại và sẽ mất khi tải lại.')
       }
-      navigate('/ket-qua/khach', { state: { result: guestResult, guest: true } })
+      const submissionWarnings = []
+      try {
+        await exitFullscreenIfNeeded()
+      } catch {
+        submissionWarnings.push('Đã nộp bài nhưng trình duyệt không thể thoát chế độ toàn màn hình.')
+      }
+      navigate('/ket-qua/khach', { state: { result: guestResult, guest: true, submissionWarnings } })
     } catch (requestError) {
       setError(`${getApiErrorMessage(requestError, 'Không thể nộp bài.')} Phiên làm bài vẫn được giữ để bạn thử lại.`)
     } finally {
       submitInFlightRef.current = false
       setSubmitting(false)
     }
-  }, [answers, exam, examId, navigate, questionItems, submissionId])
+  }, [answers, exam, examId, isMock, navigate, questionItems, submissionId])
 
   useEffect(() => {
     if (!isMock || !exam || remainingSeconds > 0 || autoSubmittedRef.current) return
@@ -295,12 +315,13 @@ export function GuestExamTakePage() {
     <ExamTakeView
       activePart={activePart} activePartKey={activePartKey} answers={answers}
       answeredCount={answeredCount} chooseAnswer={chooseAnswer} error={error} exam={exam}
+      candidateName={candidate.fullName} candidateSbd={candidate.studentIrn} examStartedAt={examStartedAt}
       goToNextPart={() => goToAdjacentPart(partIndex + 1)}
       goToPreviousPart={() => goToAdjacentPart(partIndex - 1)}
       goToQuestion={goToQuestion} guest handleSaveDraft={handleSaveDraft} handleSubmit={handleSubmit}
       hasUnsavedChanges={hasUnsavedChanges} isGeneralExam={!isMock} isMock={isMock}
       markedQuestions={markedQuestions} mockExpired={isMock && remainingSeconds === 0}
-      partIndex={partIndex} partTimes={partTimes} questionCount={questionCount}
+      partIndex={partIndex} questionCount={questionCount}
       questionItems={questionItems} questionRefs={questionRefs} remainingSeconds={remainingSeconds}
       saveStatus={saveStatus} submitting={submitting} timerStorageWarning={warning} toggleMark={toggleMark}
     />

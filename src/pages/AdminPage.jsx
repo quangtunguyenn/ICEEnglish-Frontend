@@ -16,6 +16,8 @@ import {
 } from '../services/api'
 import { MockStatsSection } from '../components/MockStatsSection'
 import { ReadingAdminSection } from '../components/ReadingAdminSection'
+import { ConsultationAdminSection } from '../components/ConsultationAdminSection'
+import { StudentAdminList } from '../components/StudentAdminList'
 import { formatInlineText, questionToHtml, textToHtml } from '../utils/textFormatting'
 
 const navigation = [
@@ -25,7 +27,12 @@ const navigation = [
   { id: 'mockStats', label: 'Thống kê thi thử', icon: '05' },
   { id: 'students', label: 'Tài khoản học sinh', icon: '04', adminOnly: true },
   { id: 'reading', label: 'Quản lý bài đọc', icon: '06', adminOnly: true },
+  { id: 'consultations', label: 'Yêu cầu tư vấn', icon: '07' },
 ]
+
+const emptyStudent = {
+  username: '', password: '', fullName: '', studentIrn: '', passwordMock: '', dob: '', gender: '',
+}
 
 function readStoredProfile() {
   try {
@@ -67,7 +74,7 @@ export function AdminPage() {
   const [bundleFile, setBundleFile] = useState(null)
   const [examFile, setExamFile] = useState(null)
   const [examType, setExamType] = useState('GENERAL_EXAM')
-  const [student, setStudent] = useState({ username: '', password: '', fullName: '' })
+  const [student, setStudent] = useState(emptyStudent)
   const [exams, setExams] = useState([])
   const [examsLoading, setExamsLoading] = useState(false)
   const [examId, setExamId] = useState('')
@@ -211,11 +218,20 @@ export function AdminPage() {
 
   async function handleCreateStudent(event) {
     event.preventDefault()
+    const { studentIrn, passwordMock, dob, gender, ...requiredFields } = student
+    const payload = {
+      ...requiredFields,
+      ...(studentIrn.trim() && { studentIrn: studentIrn.trim() }),
+      ...(passwordMock && { passwordMock }),
+      ...(dob && { dob: dob.split('-').reverse().join('/') }),
+      ...(gender && { gender }),
+    }
     const result = await runAction(
-      () => createStudent(student),
+      () => createStudent(payload),
       `Đã tạo tài khoản ${student.username}.`,
     )
-    if (result) setStudent({ username: '', password: '', fullName: '' })
+    if (result) setStudent(emptyStudent)
+    return Boolean(result)
   }
 
   async function refreshExamList() {
@@ -330,6 +346,7 @@ export function AdminPage() {
           )}
           {activeSection === 'mockStats' && <MockStatsSection />}
           {activeSection === 'reading' && isAdmin && <ReadingAdminSection />}
+          {activeSection === 'consultations' && <ConsultationAdminSection />}
           {activeSection === 'students' && isAdmin && (
             <StudentsSection
               busy={busy}
@@ -416,22 +433,46 @@ function BundleSection({ busy, file, onFileChange, onSubmit }) {
 }
 
 function StudentsSection({ busy, onChange, onSubmit, student }) {
+  const [created, setCreated] = useState(0)
+
   function updateField(event) {
     const { name, value } = event.target
     onChange((current) => ({ ...current, [name]: value }))
   }
 
+  async function submitStudent(event) {
+    if (await onSubmit(event)) setCreated((value) => value + 1)
+  }
+
   return (
     <>
       <SectionHeading
-        description="Tạo tài khoản đăng nhập cho học sinh."
+        description="Xem, tìm kiếm và quản lý trạng thái tài khoản học sinh."
         eyebrow="Chỉ dành cho ADMIN"
-        title="Tạo tài khoản học sinh"
+        title="Tài khoản học sinh"
       />
-      <form className="max-w-xl space-y-4" onSubmit={onSubmit}>
+      <StudentAdminList created={created} />
+      <h2 className="mb-4 mt-10 text-xl font-black text-slate-950">Tạo tài khoản học sinh</h2>
+      <form className="max-w-xl space-y-4" onSubmit={submitStudent}>
         <FormField autoComplete="username" label="Tên đăng nhập" name="username" onChange={updateField} required value={student.username} />
         <FormField autoComplete="name" label="Họ và tên" name="fullName" onChange={updateField} required value={student.fullName} />
         <FormField autoComplete="new-password" label="Mật khẩu tạm thời" name="password" onChange={updateField} required type="password" value={student.password} />
+        <div className="border-t border-slate-200 pt-4">
+          <h3 className="text-sm font-bold text-slate-800">Thông tin thi thử (không bắt buộc)</h3>
+          <p className="mt-1 text-sm text-slate-500">Mật khẩu luyện tập độc lập với mật khẩu đăng nhập tài khoản.</p>
+        </div>
+        <FormField label="Mã IRN học sinh" maxLength={50} name="studentIrn" onChange={updateField} value={student.studentIrn} />
+        <FormField autoComplete="off" label="Mật khẩu luyện tập" maxLength={100} name="passwordMock" onChange={updateField} value={student.passwordMock} />
+        <FormField label="Ngày sinh" name="dob" onChange={updateField} type="date" value={student.dob} />
+        <label className="block text-sm font-bold text-slate-700">
+          Giới tính
+          <select className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 font-normal outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100" name="gender" onChange={updateField} value={student.gender}>
+            <option value="">Chưa chọn</option>
+            <option value="MALE">Nam</option>
+            <option value="FEMALE">Nữ</option>
+            <option value="OTHER">Khác</option>
+          </select>
+        </label>
         <button className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-50" disabled={busy} type="submit">
           {busy ? 'Đang tạo...' : 'Tạo tài khoản'}
         </button>
@@ -440,7 +481,7 @@ function StudentsSection({ busy, onChange, onSubmit, student }) {
   )
 }
 
-function FormField({ autoComplete, label, name, onChange, required, type = 'text', value }) {
+function FormField({ autoComplete, label, maxLength, name, onChange, required, type = 'text', value }) {
   return (
     <label className="block text-sm font-bold text-slate-700">
       {label}
@@ -448,6 +489,7 @@ function FormField({ autoComplete, label, name, onChange, required, type = 'text
         autoComplete={autoComplete}
         className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 font-normal outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100"
         name={name}
+        maxLength={maxLength}
         onChange={onChange}
         required={required}
         type={type}

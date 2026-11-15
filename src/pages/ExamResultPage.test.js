@@ -138,3 +138,56 @@ test('latest practice review displays the returned video title while hiding answ
   assert.ok(html.indexOf('Bạn chọn:') < html.indexOf('Xem video ôn tập: CHUYÊN ĐỀ 3'))
   assert.doesNotMatch(html, /Đáp án đúng:|Giải thích đáp án\./)
 })
+
+test('result navigation points to the correct list above the banner', () => {
+  for (const [resultMode, path, label, title] of [
+    ['practice', '/luyen-de', 'Về danh sách luyện đề', 'KẾT QUẢ BÀI LÀM'],
+    ['mock', '/thi-thu', 'Về danh sách thi thử', 'KẾT QUẢ THI THỬ'],
+    ['homework', '/video', 'Quay lại video', 'KẾT QUẢ BÀI TẬP'],
+  ]) {
+    const result = { guest: true, resultMode, totalQuestions: 2, totalCorrect: 1, totalIncorrect: 1, score: 0, details: [] }
+    const html = renderToStaticMarkup(createElement(
+      MemoryRouter,
+      { initialEntries: [{ pathname: '/ket-qua/khach', state: { result } }] },
+      createElement(Routes, null, createElement(Route, { path: '/ket-qua/:submissionId', element: createElement(ExamResultPage) })),
+    ))
+    assert.match(html, new RegExp(`href="${path}"[^>]*>.*${label}`))
+    assert.ok(html.indexOf(label) < html.indexOf(title))
+    assert.match(html, /50% câu trả lời đúng/)
+    assert.match(html, />0<\/p>/)
+  }
+})
+
+test('mock mode in the saved result keeps its list link after reload', () => {
+  const previousStorage = globalThis.sessionStorage
+  globalThis.sessionStorage = {
+    getItem: () => JSON.stringify({ guest: true, resultMode: 'mock', totalQuestions: 0, details: [] }),
+  }
+  try {
+    const html = renderToStaticMarkup(createElement(
+      MemoryRouter,
+      { initialEntries: ['/ket-qua/khach'] },
+      createElement(Routes, null, createElement(Route, { path: '/ket-qua/:submissionId', element: createElement(ExamResultPage) })),
+    ))
+    assert.match(html, /href="\/thi-thu"[^>]*>.*Về danh sách thi thử/)
+    assert.doesNotMatch(html, /NaN%/)
+  } finally {
+    if (previousStorage === undefined) delete globalThis.sessionStorage
+    else globalThis.sessionStorage = previousStorage
+  }
+})
+
+test('guest result without exam ID does not claim visible answers are hidden', () => {
+  const result = {
+    guest: true,
+    resultMode: 'mock',
+    details: [{ questionId: 'q1', correctOpt: 'A', selectedOpt: 'A', optA: 'Answer', isCorrect: true }],
+  }
+  const html = renderToStaticMarkup(createElement(
+    MemoryRouter,
+    { initialEntries: [{ pathname: '/ket-qua/khach', state: { result } }] },
+    createElement(Routes, null, createElement(Route, { path: '/ket-qua/:submissionId', element: createElement(ExamResultPage) })),
+  ))
+  assert.match(html, /Đáp án đúng/)
+  assert.doesNotMatch(html, /đáp án được ẩn/)
+})

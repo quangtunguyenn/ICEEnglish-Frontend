@@ -36,6 +36,9 @@ function renderExam(guest, isMock) {
     questionRefs: createRef(),
     partTimes: {},
     remainingSeconds: 100,
+    candidateName: 'Nguyễn Thị Linh Chi',
+    candidateSbd: '01000071',
+    examStartedAt: '2025-09-10T12:00:00.000Z',
     chooseAnswer: noop,
     toggleMark: noop,
     handleSaveDraft: noop,
@@ -55,9 +58,35 @@ for (const isMock of [false, true]) {
         assert.ok(html.includes(label), `Missing ${label}`)
       }
       assert.match(html, /role="dialog"/)
+      assert.match(html, /giao diện bài thi sẽ bị khóa trong chế độ toàn màn hình/)
       assert.match(html, /exam-question-dot/)
       assert.match(html, /Đánh dấu câu 1/)
+      assert.match(html, /Nguyễn Thị Linh Chi/)
+      assert.match(html, /SBD: 01000071/)
+      assert.match(html, /Môn thi: TIẾNG ANH/)
+      assert.match(html, /Ngày thi:/)
+      assert.doesNotMatch(html, /⊟|⊞|▤/)
     }
-    if (isMock) assert.match(guest, /thời hạn nộp được máy chủ xác thực/)
+    if (isMock) {
+      assert.match(guest, /thời hạn nộp được máy chủ xác thực/)
+      assert.match(guest, /role="timer"/)
+      assert.ok(guest.indexOf('Nộp bài') < guest.indexOf('Quay lại'))
+    } else {
+      assert.doesNotMatch(guest, /role="timer"/)
+      assert.ok(guest.indexOf('Nộp bài') < guest.indexOf('Quay lại'))
+    }
   })
 }
+
+test('does not show a fullscreen prompt when the browser is already fullscreen', () => {
+  const originalDocument = globalThis.document
+  globalThis.document = { fullscreenElement: {} }
+
+  try {
+    const html = renderExam(false, true)
+    assert.doesNotMatch(html, /Bắt đầu toàn màn hình/)
+  } finally {
+    if (originalDocument === undefined) delete globalThis.document
+    else globalThis.document = originalDocument
+  }
+})
