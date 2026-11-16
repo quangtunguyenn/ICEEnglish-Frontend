@@ -19,32 +19,61 @@ export function ExamSearchForm({ keywordInput, onKeywordChange, student = false 
   );
 }
 
-export function ExamPager({ onPageChange, page, totalPages }) {
+export function ExamPager({ loading = false, onPageChange, page, totalPages }) {
   if (totalPages <= 1) return null;
+  const anchors = [...new Set([0, page - 1, page, page + 1, totalPages - 1])]
+    .filter((number) => number >= 0 && number < totalPages)
+    .sort((a, b) => a - b);
+  const pages = anchors.flatMap((number, index) =>
+    index > 0 && number - anchors[index - 1] === 2 ? [number - 1, number] : [number],
+  );
+  const buttonClass = "inline-flex h-10 min-w-10 items-center justify-center rounded-xl border text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#102b5c] disabled:cursor-not-allowed disabled:opacity-40";
+
   return (
     <nav
       aria-label="Phân trang"
-      className="mt-8 flex items-center justify-center gap-4 text-sm"
+      className="mt-8 flex flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white px-3 py-5 shadow-sm sm:flex-row sm:justify-between sm:px-5"
     >
-      <button
-        className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-semibold disabled:opacity-40"
-        disabled={page <= 0}
-        onClick={() => onPageChange(page - 1)}
-        type="button"
-      >
-        ← Trước
-      </button>
-      <span className="text-slate-500">
-        Trang {page + 1}/{totalPages}
-      </span>
-      <button
-        className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-semibold disabled:opacity-40"
-        disabled={page + 1 >= totalPages}
-        onClick={() => onPageChange(page + 1)}
-        type="button"
-      >
-        Sau →
-      </button>
+      <p aria-live="polite" className="text-sm font-medium text-slate-600">
+        Trang <span className="font-bold text-[#102b5c]">{page + 1}</span> / {totalPages}
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
+        <button
+          aria-label="Trang trước"
+          className={`${buttonClass} border-slate-200 px-3 text-slate-600 hover:border-ice-gold hover:text-[#102b5c]`}
+          disabled={loading || page <= 0}
+          onClick={() => onPageChange(page - 1)}
+          type="button"
+        >
+          <span aria-hidden="true">←</span><span className="ml-1.5 hidden sm:inline">Trước</span>
+        </button>
+        {pages.map((number, index) => (
+          <span className="inline-flex items-center gap-1.5" key={number}>
+            {index > 0 && number - pages[index - 1] > 1 && (
+              <span aria-hidden="true" className="px-0.5 text-slate-400">…</span>
+            )}
+            <button
+              aria-current={number === page ? "page" : undefined}
+              aria-label={`Trang ${number + 1}`}
+              className={`${buttonClass} ${number === page ? "border-[#102b5c] bg-[#102b5c] text-white shadow-sm" : "border-slate-200 text-slate-600 hover:border-ice-gold hover:bg-amber-50 hover:text-[#102b5c]"}`}
+              disabled={loading}
+              onClick={() => onPageChange(number)}
+              type="button"
+            >
+              {number + 1}
+            </button>
+          </span>
+        ))}
+        <button
+          aria-label="Trang sau"
+          className={`${buttonClass} border-slate-200 px-3 text-slate-600 hover:border-ice-gold hover:text-[#102b5c]`}
+          disabled={loading || page + 1 >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+          type="button"
+        >
+          <span className="mr-1.5 hidden sm:inline">Sau</span><span aria-hidden="true">→</span>
+        </button>
+      </div>
     </nav>
   );
 }

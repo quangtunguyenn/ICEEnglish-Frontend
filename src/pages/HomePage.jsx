@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -15,7 +15,7 @@ const features = [
     title: "Vững thao tác, tự tin vào phòng thi",
     description:
       "Làm quen giao diện thi, luyện chọn đáp án và điều hướng câu hỏi để chuẩn bị tâm lý trước kỳ thi.",
-    image: "/Screenshot%202026-11-15%20195928.png",
+    image: "/phong-thi-ao.png",
     imageAlt: "Ảnh chụp màn hình phòng thi ảo khi đang làm bài",
     destination: "/thi-thu",
     action: "Trải nghiệm phòng thi",
@@ -26,7 +26,7 @@ const features = [
     title: "Học đúng trọng tâm qua video tương tác",
     description:
       "Củng cố ngữ pháp bằng bài giảng dễ theo dõi, kết hợp nội dung từ vựng đa chủ đề gắn với bài học.",
-    image: "/Screenshot%202026-11-15%20200011.png",
+    image: "/bai-giang.png",
     imageAlt: "Ảnh chụp trang bài giảng video và danh sách chuyên đề",
     destination: "/video",
     action: "Khám phá bài giảng",
@@ -37,7 +37,7 @@ const features = [
     title: "Ghi nhớ từ vựng chủ động, sinh động",
     description:
       "Luyện từ theo chủ đề với flashcard trực quan, kết hợp phát âm, nghĩa và ví dụ trong ngữ cảnh.",
-    image: "/Screenshot%202026-11-15%20200019.png",
+    image: "/flashcard.png",
     imageAlt: "Ảnh chụp tính năng học từ vựng bằng flashcard",
     destination: "/tu-vung",
     action: "Luyện tập từ vựng",
@@ -48,10 +48,56 @@ const features = [
     title: "Đọc hiểu tốt hơn qua chủ đề đa dạng",
     description:
       "Rèn kỹ năng đọc và trau dồi từ vựng trong ngữ cảnh qua các bài đọc cùng câu hỏi luyện tập.",
-    image: "/Screenshot%202026-11-15%20200043.png",
+    image: "/thu-vien.png",
     imageAlt: "Ảnh chụp thư viện bài đọc và nội dung đọc hiểu",
     destination: "/doc-hieu",
     action: "Mở thư viện bài đọc",
+  },
+];
+
+const examScreenshots = [
+  {
+    image: "/giao dien vao thi.png",
+    alt: "Giao diện đăng nhập làm bài thi thử",
+    caption: "Đăng nhập vào kỳ thi",
+  },
+  {
+    image: "/giao dien vao thi 2.png",
+    alt: "Giao diện thông tin thí sinh và lựa chọn môn thi",
+    caption: "Kiểm tra thông tin và vào thi",
+  },
+  {
+    image: "/phong-thi-ao.png",
+    alt: "Giao diện phòng thi với bài đọc, câu hỏi và đồng hồ đếm ngược",
+    caption: "Làm bài trong phòng thi ảo",
+  },
+];
+
+const resultScreenshots = [
+  {
+    image: "/chi-tiet-ket-qua.png",
+    alt: "Kết quả thi thử và thời gian làm bài theo từng phần",
+    caption: "Kết quả và thời gian từng phần",
+  },
+  {
+    image: "/dap-an.png",
+    alt: "Đáp án, giải thích và gợi ý video ôn tập",
+    caption: "Đáp án và video ôn tập",
+  },
+  {
+    image: "/doan-dich.png",
+    alt: "Bài đọc tiếng Anh và bản dịch tiếng Việt đặt cạnh nhau",
+    caption: "Đối chiếu bản dịch bài đọc",
+  },
+  {
+    image: "/chi-tiet-thi-thu.png",
+    alt: "Thông tin đề thi thử và điểm số gần nhất",
+    caption: "Theo dõi chi tiết từng đề thi",
+  },
+  {
+    image: "/bieu-do-diem.png",
+    alt: "Biểu đồ xu hướng điểm số qua các lần thi thử",
+    caption: "Biểu đồ tiến bộ qua các bài thi",
   },
 ];
 
@@ -86,22 +132,68 @@ const courseStages = [
   },
 ];
 
-function ProductScreenshot({ feature }) {
+function ZoomableImage({ src, alt, imageClassName, onOpen }) {
+  return (
+    <button
+      aria-label={`Phóng to: ${alt}`}
+      className="image-zoom-trigger"
+      onClick={() => onOpen({ src, alt })}
+      type="button"
+    >
+      <img alt={alt} className={imageClassName} decoding="async" loading="lazy" src={src} />
+      <span className="exam-gallery-zoom" aria-hidden="true">↗</span>
+    </button>
+  );
+}
+
+function ProductScreenshot({ feature, onOpen }) {
   return (
     <figure className="feature-shot">
-      <img
+      <ZoomableImage
         alt={feature.imageAlt}
-        className="feature-shot-image"
-        decoding="async"
-        loading="lazy"
+        imageClassName="feature-shot-image"
+        onOpen={onOpen}
         src={feature.image}
       />
     </figure>
   );
 }
 
+function ScreenshotGallery({ screenshots, onOpen }) {
+  return (
+    <div className="exam-gallery">
+      {screenshots.map((screenshot, index) => (
+        <figure className="exam-gallery-item" key={screenshot.image}>
+          <ZoomableImage alt={screenshot.alt} onOpen={onOpen} src={screenshot.image} />
+          <figcaption><span>{String(index + 1).padStart(2, "0")}</span>{screenshot.caption}</figcaption>
+        </figure>
+      ))}
+    </div>
+  );
+}
+
 function HomePage() {
   const pageRef = useRef(null);
+  const imageDialogRef = useRef(null);
+  const imageCloseRef = useRef(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imageZoom, setImageZoom] = useState(1);
+
+  useEffect(() => {
+    if (!selectedImage) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [selectedImage]);
+
+  function openImage(image) {
+    setSelectedImage(image);
+    setImageZoom(1);
+    imageDialogRef.current.showModal();
+    imageCloseRef.current.focus();
+  }
 
   useGSAP(
     () => {
@@ -119,6 +211,23 @@ function HomePage() {
           duration: 0.75,
           ease: "power3.out",
         }, "-=0.4");
+
+      gsap.to(".hero-course-card", {
+        y: -10,
+        duration: 3,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut",
+      });
+
+      gsap.to(".hero-float-card", {
+        y: -14,
+        duration: 2.5,
+        stagger: 0.4,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut",
+      });
 
       gsap.from(".section-intro > *", {
         y: 25,
@@ -138,6 +247,25 @@ function HomePage() {
           stagger: 0.1,
           ease: "power2.out",
           scrollTrigger: { trigger: card, start: "top 86%", once: true },
+        });
+      });
+
+      gsap.utils.toArray(".exam-showcase").forEach((section) => {
+        gsap.from(section.querySelector(".exam-showcase-heading"), {
+          y: 30,
+          opacity: 0,
+          duration: 0.7,
+          ease: "power2.out",
+          scrollTrigger: { trigger: section, start: "top 82%", once: true },
+        });
+        section.querySelectorAll(".exam-gallery-item").forEach((item) => {
+          gsap.from(item, {
+            y: 35,
+            opacity: 0,
+            duration: 0.65,
+            ease: "power2.out",
+            scrollTrigger: { trigger: item, start: "top 88%", once: true },
+          });
         });
       });
 
@@ -306,7 +434,7 @@ function HomePage() {
           <div className="features-grid">
             {features.map((feature) => (
               <article className="feature-card home-block" key={feature.number}>
-                <ProductScreenshot feature={feature} />
+                <ProductScreenshot feature={feature} onOpen={openImage} />
                 <div className="feature-card-copy">
                   <span className="feature-index">
                     <i>{feature.number}</i>
@@ -325,16 +453,52 @@ function HomePage() {
         </div>
       </section>
 
+      <section aria-labelledby="exam-experience-title" className="exam-showcase" id="phong-thi-ao">
+        <div className="section-shell">
+          <div className="exam-showcase-heading">
+            <span className="eyebrow">TRẢI NGHIỆM PHÒNG THI ẢO</span>
+            <h2 id="exam-experience-title">Quen giao diện thi.<br /><span>Vững vàng tâm lý.</span></h2>
+            <p>
+              Giao diện phòng thi được xây dựng theo sát đề án và công bố của Bộ
+              Giáo dục và Đào tạo, giúp học sinh làm quen từ bước đăng nhập,
+              vào thi đến chọn đáp án và quản lý thời gian. Luyện tập trước để
+              tự tin hơn khi bước vào kỳ thi.
+            </p>
+            <div className="showcase-tags"><span>01 · Đăng nhập</span><span>02 · Vào thi</span><span>03 · Làm bài</span></div>
+          </div>
+          <ScreenshotGallery screenshots={examScreenshots} onOpen={openImage} />
+          <Link className="feature-link exam-showcase-link" to="/thi-thu">
+            Trải nghiệm phòng thi ảo <span aria-hidden="true">↗</span>
+          </Link>
+        </div>
+      </section>
+
+      <section aria-labelledby="exam-results-title" className="exam-showcase exam-showcase--results" id="theo-doi-ket-qua">
+        <div className="section-shell">
+          <div className="exam-showcase-heading">
+            <span className="eyebrow">KẾT QUẢ &amp; TIẾN BỘ</span>
+            <h2 id="exam-results-title">Hiểu kết quả.<br /><span>Nhìn rõ tiến bộ.</span></h2>
+            <p>
+              Theo dõi điểm số và thời gian làm từng phần, xem đáp án cùng bản
+              dịch bài đọc trực quan. Các gợi ý video bài giảng giúp ôn lại kiến
+              thức liên quan, trong khi biểu đồ năng lực qua các bài thi giúp
+              bạn nhận ra sự tiến bộ và điều chỉnh cách học.
+            </p>
+            <div className="showcase-tags"><span>Thời gian từng phần</span><span>Đáp án &amp; bài giảng</span><span>Biểu đồ tiến bộ</span></div>
+          </div>
+          <ScreenshotGallery screenshots={resultScreenshots} onOpen={openImage} />
+        </div>
+      </section>
+
       <section aria-labelledby="aca-title" className="aca-section" id="bo-de-aca">
         <div className="section-shell">
           <div className="aca-layout">
             <figure className="aca-image-wrap">
-              <img
+              <ZoomableImage
                 alt="Ba trang đề thi ACA được trình bày cạnh nhau"
-                className="aca-image"
-                decoding="async"
-                loading="lazy"
-                src="/Screenshot%202026-11-15%20205140.png"
+                imageClassName="aca-image"
+                onOpen={openImage}
+                src="/bo-de.png"
               />
               <figcaption>BỘ ĐỀ ACA · LUYỆN TẬP THEO TUẦN</figcaption>
             </figure>
@@ -408,6 +572,9 @@ function HomePage() {
               </article>
             ))}
           </div>
+          <Link className="feature-link course-details-link" to="/khoa-hoc/ice-masterclass">
+            Tìm hiểu khóa học ICE Masterclass <span aria-hidden="true">↗</span>
+          </Link>
         </div>
       </section>
 
@@ -448,6 +615,38 @@ function HomePage() {
           <ConsultationForm />
         </div>
       </section>
+
+      <dialog
+        aria-label={selectedImage ? `Ảnh phóng to: ${selectedImage.alt}` : "Ảnh phóng to"}
+        className="image-dialog"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) imageDialogRef.current.close();
+        }}
+        onClose={() => setSelectedImage(null)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            imageDialogRef.current.close();
+          }
+        }}
+        ref={imageDialogRef}
+      >
+        <div className="image-dialog-toolbar">
+          <span>{selectedImage?.alt}</span>
+          <div className="image-dialog-actions">
+            <button aria-label="Thu nhỏ ảnh" disabled={imageZoom <= 1} onClick={() => setImageZoom((zoom) => Math.max(1, zoom - 0.5))} type="button">−</button>
+            <span aria-live="polite">{Math.round(imageZoom * 100)}%</span>
+            <button aria-label="Phóng to ảnh" disabled={imageZoom >= 3} onClick={() => setImageZoom((zoom) => Math.min(3, zoom + 0.5))} type="button">+</button>
+            <button aria-label="Đóng ảnh" onClick={() => imageDialogRef.current.close()} ref={imageCloseRef} type="button">×</button>
+          </div>
+        </div>
+        {selectedImage && (
+          <div className="image-dialog-viewport">
+            <img alt={selectedImage.alt} src={selectedImage.src} style={{ width: `${imageZoom * 100}%` }} />
+          </div>
+        )}
+      </dialog>
     </div>
   );
 }

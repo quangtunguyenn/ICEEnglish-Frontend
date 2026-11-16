@@ -29,7 +29,7 @@ function renderLayout(path = '/') {
 }
 
 test('site footer appears on browsing pages but not immersive exam or homework pages', () => {
-  for (const path of ['/', '/luyen-de', '/thi-thu', '/luyen-de/123/lich-su', '/video']) {
+  for (const path of ['/', '/ve-chung-toi', '/vinh-danh', '/luyen-de', '/thi-thu', '/luyen-de/123/lich-su', '/video']) {
     const html = renderLayout(path)
     assert.match(html, /<footer\b/)
     assert.match(html, /aria-label="Phòng thi"/)
@@ -52,8 +52,8 @@ test('guest sees login instead of logout', () => {
   token = null
   const html = renderLayout()
   assert.match(html, /ĐĂNG NHẬP/)
-  assert.match(html, /LỘ TRÌNH HỌC/)
-  assert.match(html, /href="\/#lo-trinh"/)
+  assert.match(html, /NHẬN TƯ VẤN/)
+  assert.match(html, /href="\/#tu-van"/)
   assert.doesNotMatch(html, /ĐĂNG XUẤT/)
 })
 
@@ -79,6 +79,7 @@ test('navigation uses the requested order and the public logo', () => {
   const html = renderLayout()
   const labels = [
     'TRANG CHỦ',
+    'VỀ CHÚNG TÔI',
     'KHÓA HỌC',
     'ICE Masterclass: Bứt phá điểm số THPTQG 2027',
     'PHÒNG THI',
@@ -88,7 +89,7 @@ test('navigation uses the requested order and the public logo', () => {
     'HỆ THỐNG BÀI GIẢNG',
     'LUYỆN TẬP TỪ VỰNG',
     'THƯ VIỆN ĐỌC HIỂU',
-    'VỀ CHÚNG TÔI',
+    'VINH DANH',
   ]
 
   assert.match(html, /src="\/logo\.png"/)
@@ -98,12 +99,23 @@ test('navigation uses the requested order and the public logo', () => {
   assert.equal((navHtml.match(/aria-current="page"/g) ?? []).length, 1)
   let previousIndex = -1
   for (const label of labels) {
-    const index = html.indexOf(label)
+    const index = navHtml.indexOf(label)
     assert.ok(index > previousIndex, `Expected "${label}" after the previous navigation item`)
     previousIndex = index
   }
   assert.match(html, /font-playwrite text-\[18px\]/)
+  assert.match(navHtml, /href="\/khoa-hoc\/ice-masterclass"/)
+  assert.match(navHtml, /href="\/ve-chung-toi"[^>]*>VỀ CHÚNG TÔI<\/a>/)
+  assert.match(navHtml, /href="\/vinh-danh"[^>]*>VINH DANH<\/a>/)
   assert.match(html, /font-gf text-\[16px\]/)
-  assert.match(html, /text-yellow-600/)
+  for (const [label, color] of [
+    ['KHÓA HỌC', 'text-[#102B5C]'],
+    ['PHÒNG THI', 'text-yellow-600'],
+    ['HỌC TẬP', 'text-yellow-600'],
+  ]) {
+    const button = navHtml.match(new RegExp(`<button\\b[^>]*>\\s*${label}`))?.[0]
+    assert.ok(button, `Missing navigation button: ${label}`)
+    assert.ok(button.includes(color), `Expected ${label} to use ${color}`)
+  }
   assert.match(html, /lg:group-hover:grid-rows-\[1fr\]/)
 })

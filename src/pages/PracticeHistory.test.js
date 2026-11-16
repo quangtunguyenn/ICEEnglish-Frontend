@@ -1,12 +1,16 @@
 import assert from 'node:assert/strict'
 import { createServer as createHttpServer } from 'node:http'
 import { after, before, test } from 'node:test'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { createServer as createViteServer } from 'vite'
 import { formatPracticeSubmissionDate } from '../utils/practiceHistory.js'
 
 let server
 let vite
 let api
+let PracticeHistoryPage
 let requests
 let response
 const originalApiUrl = process.env.VITE_API_BASE_URL
@@ -24,6 +28,7 @@ before(async () => {
   globalThis.localStorage = { getItem: () => null }
   vite = await createViteServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' })
   api = await vite.ssrLoadModule('/src/services/api.js')
+  ;({ PracticeHistoryPage } = await vite.ssrLoadModule('/src/pages/PracticeHistoryPage.jsx'))
 })
 
 after(async () => {
@@ -86,4 +91,20 @@ test('submission date is displayed in Vietnam time regardless of device timezone
   assert.match(formatted, /21:30/)
   assert.match(formatted, /06\/11\/2026/)
   assert.throws(() => formatPracticeSubmissionDate('2026-11-06T14:30:00'), /không hợp lệ/)
+})
+
+test('history displays the branded heading and retains the back link and loading state', () => {
+  const html = renderToStaticMarkup(
+    createElement(MemoryRouter, { initialEntries: ['/luyen-de/exam-1/lich-su'] },
+      createElement(Routes, null,
+        createElement(Route, { path: '/luyen-de/:examId/lich-su', element: createElement(PracticeHistoryPage) }),
+      ),
+    ),
+  )
+
+  assert.match(html, /ICE English \/ Phòng luyện tập/)
+  assert.match(html, /<h1[^>]*>LỊCH SỬ LUYỆN TẬP<\/h1>/)
+  assert.match(html, /src="\/ice_english_emblem_vector\.svg"/)
+  assert.match(html, /href="\/luyen-de"[^>]*>/)
+  assert.match(html, /aria-busy="true"/)
 })

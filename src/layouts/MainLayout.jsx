@@ -15,12 +15,13 @@ import { getProfileInitial } from "../utils/profile";
 
 const navigation = [
   { label: "TRANG CHỦ", to: "/", end: true },
+  { label: "VỀ CHÚNG TÔI", to: "/ve-chung-toi", plain: true },
   {
     label: "KHÓA HỌC",
     items: [
       {
         label: "ICE Masterclass: Bứt phá điểm số THPTQG 2027",
-        to: "/#tinh-nang",
+        to: "/khoa-hoc/ice-masterclass",
       },
     ],
   },
@@ -39,7 +40,7 @@ const navigation = [
       { label: "THƯ VIỆN ĐỌC HIỂU", to: "/doc-hieu" },
     ],
   },
-  { label: "VỀ CHÚNG TÔI", to: "/", plain: true },
+  { label: "VINH DANH", to: "/vinh-danh" },
 ];
 
 function subscribeFullscreen(callback) {
@@ -444,8 +445,8 @@ export function MainLayout() {
                         aria-haspopup="true"
                         className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 font-cal-sans text-left text-[15px] font-semibold transition hover:bg-ice-gold-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ice-gold lg:w-auto lg:px-2 lg:text-[14px] xl:px-3 xl:text-[16px] ${
                           item.label === "KHÓA HỌC"
-                            ? "text-yellow-600 hover:text-ice-gold-800"
-                            : "text-[#102B5C] hover:text-[#102B5C]"
+                            ? "text-[#102B5C] hover:text-[#102B5C]"
+                            : "text-yellow-600 hover:text-ice-gold-800"
                         }`}
                         onClick={() => {
                           if (
@@ -548,13 +549,22 @@ export function MainLayout() {
                 <div className="flex flex-wrap items-center gap-2 px-3 pt-2 lg:col-start-3 lg:row-start-1 lg:flex-nowrap lg:justify-self-end lg:self-center lg:px-0 lg:pt-0">
                   <Link
                     className="group relative inline-flex shrink-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-full border border-ice-gold bg-ice-gold-50 px-4 py-2 font-gf text-sm font-bold text-ice-gold-800 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-ice-gold hover:bg-ice-gold-100 hover:shadow-[0_8px_20px_-10px_rgba(180,120,0,0.4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ice-gold active:translate-y-0 lg:self-center lg:px-2 lg:py-2.5 lg:text-[13px] xl:px-5 xl:text-[15px]"
-                    onClick={() => {
+                    onClick={(event) => {
                       setOpenMenu(null);
                       setMobileMenuOpen(false);
+                      if (
+                        event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey &&
+                        location.pathname === "/" && location.hash === "#tu-van"
+                      ) {
+                        document.getElementById("tu-van")?.scrollIntoView({
+                          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                          block: "start",
+                        });
+                      }
                     }}
-                    to="/#lo-trinh"
+                    to="/#tu-van"
                   >
-                    <span className="relative z-10 font-cal-sans text-[15px]">LỘ TRÌNH HỌC</span>
+                    <span className="relative z-10 font-cal-sans text-[15px]">NHẬN TƯ VẤN</span>
                     {/* Hiệu ứng quét sáng lướt qua */}
                     <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-ice-gold-200/40 to-transparent transition-transform duration-700 ease-in-out group-hover:translate-x-full"></div>
                   </Link>

@@ -24,8 +24,8 @@ Hiện tại backend trả **tất cả** đề (cả DRAFT, ARCHIVED) cho học
 ## 2. API cần sửa
 
 ```http
-GET /api/v1/exams?mode=GENERAL_EXAM&page=0&size=12&keyword=&sort=createdAt,desc
-GET /api/v1/exams?mode=MOCK&page=0&size=12&keyword=&sort=createdAt,desc
+GET /api/v1/exams?mode=GENERAL_EXAM&page=0&size=12&sort=createdAt,desc
+GET /api/v1/exams?mode=MOCK&page=0&size=12&sort=createdAt,desc
 ```
 
 | Query | Mặc định | Ghi chú |
@@ -88,7 +88,7 @@ Response cùng dạng phân trang như trên. Item: `submissionId`, `examId`, `e
 ## 5. Phía frontend sẽ làm khi backend xong
 
 - `getGeneralExams(page, size, keyword)` và `getMockExams(page, size, keyword)` trả về `{ items, page, totalPages, totalElements }`.
-- Hai trang hiển thị ô tìm kiếm và nút Trước/Sau (hoặc số trang).
+- Hai trang yêu cầu 12 đề mỗi trang và hiển thị ô tìm kiếm, điều hướng theo số trang. Endpoint khách chưa hỗ trợ phân trang nên danh sách khách được lọc và chia trang ở frontend.
 - Bỏ `isPublishedExam` và bước lọc `mode` ở frontend.
 - Bỏ gọi `latest-score` từng đề nếu có `latestScore` trong item.
 

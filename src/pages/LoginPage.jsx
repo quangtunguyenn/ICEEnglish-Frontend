@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ConsultationForm } from "../components/ConsultationForm";
 import {
@@ -38,6 +38,16 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConsultationOpen, setIsConsultationOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const loginHeadingRef = useRef(null);
+  const consultationHeadingRef = useRef(null);
+  const switchedFormRef = useRef(false);
+
+  useEffect(() => {
+    if (switchedFormRef.current) {
+      (isConsultationOpen ? consultationHeadingRef : loginHeadingRef).current?.focus({ preventScroll: true });
+    }
+  }, [isConsultationOpen]);
 
   function updateField(event) {
     const { name, value } = event.target;
@@ -46,10 +56,12 @@ export function LoginPage() {
 
   function showConsultationForm() {
     setError("");
+    switchedFormRef.current = true;
     setIsConsultationOpen(true);
   }
 
   function showLoginForm() {
+    switchedFormRef.current = true;
     setIsConsultationOpen(false);
   }
 
@@ -114,14 +126,13 @@ export function LoginPage() {
   }
 
   return (
-    // Dùng h-screen và overflow-hidden để khóa chặt layout bằng đúng 100% màn hình, không bị cuộn trang
-    <main className="relative h-screen w-full overflow-hidden bg-white lg:grid lg:grid-cols-2">
+    <main className="relative h-[100dvh] w-full overflow-hidden bg-white lg:grid lg:grid-cols-2">
       <section
-        className={`relative z-10 flex h-full w-full flex-col overflow-y-auto bg-slate-50 px-6 py-8 transition-transform duration-700 ease-in-out sm:px-10 lg:col-start-1 lg:row-start-1 lg:rounded-3xl lg:border lg:border-slate-200/80 lg:px-14 lg:shadow-[0_20px_60px_-24px_rgba(15,23,42,0.22)] xl:px-20 ${
+        className={`relative z-10 flex h-full w-full flex-col overflow-y-auto bg-[#f7f9fc] px-5 py-8 transition-transform duration-700 ease-in-out sm:px-10 lg:col-start-1 lg:row-start-1 lg:px-8 lg:shadow-[0_20px_60px_-24px_rgba(15,23,42,0.22)] xl:px-12 ${
           isConsultationOpen ? "lg:translate-x-full" : ""
         }`}
       >
-        <div className="relative mx-auto my-auto grid w-full max-w-md">
+        <div className={`relative mx-auto my-auto grid w-full ${isConsultationOpen ? "max-w-2xl" : "max-w-md"}`}>
           <div
             aria-hidden={isConsultationOpen}
             className={`col-start-1 row-start-1 transition-all duration-500 ease-in-out ${
@@ -133,20 +144,23 @@ export function LoginPage() {
           >
             <Link
               aria-label="ICE English - Trang chủ"
-              className="inline-flex rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-600"
+              className="inline-flex rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ice-gold"
               to="/"
             >
               <img
                 alt="ICE English"
-                className="h-auto w-auto max-w-full object-contain"
+                className="h-auto w-48 max-w-full object-contain sm:w-56"
                 src="/logo.png"
               />
             </Link>
 
-            <div className="mt-8">
-              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-cyan-600"></span>
-              <h1 className="mt-3 font-gf text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-                Chào mừng trở lại !
+            <div className="mt-10">
+              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-ice-gold-700">
+                <span aria-hidden="true" className="h-px w-8 bg-ice-gold" />
+                Hành trình cùng ICE
+              </span>
+              <h1 className="mt-3 font-gf text-3xl font-extrabold tracking-tight text-ice-navy sm:text-4xl" ref={loginHeadingRef} tabIndex={-1}>
+                Chào mừng trở lại!
               </h1>
               <p className="mt-2.5 text-[16px] font-inter leading-relaxed text-slate-500">
                 Đăng nhập ngay để tiếp tục hành trình bứt phá điểm số và chinh
@@ -161,7 +175,7 @@ export function LoginPage() {
                 </span>
                 <input
                   autoComplete="username"
-                  className="w-full font-questrial rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-[16px] text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/15"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-[16px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-ice-navy focus:ring-4 focus:ring-ice-navy/10"
                   name="username"
                   onChange={updateField}
                   placeholder="Nhập tài khoản của bạn"
@@ -171,23 +185,35 @@ export function LoginPage() {
                 />
               </label>
 
-              <label className="block">
+              <div>
                 <div className="mb-1.5 flex items-center justify-between">
-                  <span className="block font-p text-sm font-semibold text-slate-700">
+                  <label className="block font-p text-sm font-semibold text-slate-700" htmlFor="login-password">
                     Mật khẩu
-                  </span>
+                  </label>
                 </div>
-                <input
-                  autoComplete="current-password"
-                  className="w-full font-questrial rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-[15px] text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/15"
-                  name="password"
-                  onChange={updateField}
-                  placeholder="••••••••"
-                  required
-                  type="password"
-                  value={credentials.password}
-                />
-              </label>
+                <div className="relative">
+                  <input
+                    autoComplete="current-password"
+                    className="w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-4 pr-20 text-[16px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-ice-navy focus:ring-4 focus:ring-ice-navy/10"
+                    id="login-password"
+                    name="password"
+                    onChange={updateField}
+                    placeholder="••••••••"
+                    required
+                    type={showPassword ? "text" : "password"}
+                    value={credentials.password}
+                  />
+                  <button
+                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                    aria-pressed={showPassword}
+                    className="absolute inset-y-0 right-0 rounded-lg px-4 text-sm font-semibold text-ice-navy hover:text-ice-gold-700 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-ice-gold"
+                    onClick={() => setShowPassword((current) => !current)}
+                    type="button"
+                  >
+                    {showPassword ? "Ẩn" : "Hiện"}
+                  </button>
+                </div>
+              </div>
 
               {error && (
                 <div
@@ -210,7 +236,7 @@ export function LoginPage() {
               )}
 
               <button
-                className="group hover:cursor-pointer relative mt-2 flex w-full items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#102B5C] to-cyan-800 px-4 py-3.5 font-google-sans text-[16px] font-bold text-white shadow-lg shadow-cyan-900/20 transition-all duration-300 hover:from-cyan-900 hover:to-cyan-700 hover:shadow-xl hover:shadow-cyan-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
+                className="relative mt-2 flex w-full cursor-pointer items-center justify-center rounded-xl bg-ice-navy px-4 py-4 text-[16px] font-bold text-white shadow-lg shadow-ice-navy/15 transition hover:bg-[#20477e] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ice-gold disabled:cursor-not-allowed disabled:opacity-70"
                 disabled={isSubmitting}
                 type="submit"
               >
@@ -243,10 +269,10 @@ export function LoginPage() {
               </button>
             </form>
 
-            <p className="mt-8 text-center font-lexend text-[15px] text-slate-500">
+            <p className="mt-8 border-t border-slate-200 pt-6 text-center text-[15px] text-slate-500">
               Bạn chưa có tài khoản?{" "}
               <button
-                className="font-semibold text-cyan-600 transition hover:text-cyan-700 hover:underline"
+                className="font-semibold text-ice-navy transition hover:text-ice-gold-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ice-gold"
                 onClick={showConsultationForm}
                 type="button"
               >
@@ -264,13 +290,13 @@ export function LoginPage() {
             }`}
             inert={!isConsultationOpen}
           >
-            <h1 className="sr-only">Tư vấn khóa học ICE Masterclass</h1>
+            <h1 className="sr-only" ref={consultationHeadingRef} tabIndex={-1}>Tư vấn khóa học ICE Masterclass</h1>
             <ConsultationForm />
 
             <p className="mt-8 font-lexend text-[15px] text-center text-sm text-slate-500">
               Đã có tài khoản?{" "}
               <button
-                className="font-semibold  text-cyan-600 transition hover:text-cyan-700 hover:underline"
+                className="font-semibold text-ice-navy transition hover:text-ice-gold-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ice-gold"
                 onClick={showLoginForm}
                 type="button"
               >
@@ -281,112 +307,42 @@ export function LoginPage() {
         </div>
       </section>
 
-      {/* CỘT PHẢI: Đã tinh chỉnh khoảng cách h-full để không thừa scrollbar */}
       <section
-        className={`relative hidden h-full overflow-hidden bg-[#0A162C] px-8 py-8 transition-transform duration-700 ease-in-out lg:col-start-2 lg:row-start-1 lg:flex lg:items-center lg:justify-center xl:px-16 ${
+        className={`relative hidden h-full overflow-x-hidden overflow-y-auto bg-[#091a38] px-8 py-8 text-white transition-transform duration-700 ease-in-out lg:col-start-2 lg:row-start-1 lg:flex xl:px-16 ${
           isConsultationOpen ? "lg:-translate-x-full" : ""
         }`}
       >
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.15),transparent_55%),linear-gradient(180deg,#0A162C_0%,#060D1A_100%)]"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute -bottom-40 -left-40 h-[500px] w-[500px] rounded-full bg-cyan-600/10 blur-[100px]"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute top-1/4 -right-32 h-80 w-80 rounded-full bg-blue-600/15 blur-[80px]"
-        />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(48,100,162,0.4),transparent_45%),linear-gradient(145deg,#102b5c,#07152e)]" />
+        <img alt="" aria-hidden="true" className="pointer-events-none absolute -right-24 -top-20 w-96 opacity-[0.12] brightness-0 invert" src="/ice_english_emblem_vector.svg" />
 
-        <div className="relative z-10 flex w-full max-w-[440px] flex-col items-center">
-          <div className="flex items-center gap-3 self-start">
-            <div></div>
+        <div className="relative z-10 mx-auto my-auto w-full max-w-lg">
+          <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-ice-gold">
+            <span aria-hidden="true" className="h-px w-9 bg-ice-gold" />
+            Đồng hành cùng ICE English
+          </p>
+          <h2 className="mt-6 font-gf text-4xl font-bold leading-tight tracking-tight xl:text-5xl">
+            Vững kiến thức.<br /><span className="text-ice-gold">Vững vàng tâm thế.</span>
+          </h2>
+          <p className="mt-5 max-w-md text-sm leading-7 text-slate-300">
+            Từng bài giảng, lần luyện tập và trải nghiệm phòng thi đều là một bước tiến trên hành trình của bạn.
+          </p>
+
+          <div className="mt-8 grid gap-3">
+            {[
+              ["01", "Luyện đề có định hướng", "Rèn luyện và xem lại từng bài làm."],
+              ["02", "Làm quen phòng thi ảo", "Chuẩn bị thao tác và tâm lý trước kỳ thi."],
+              ["03", "Học tập và theo dõi tiến bộ", "Ôn kiến thức, luyện từ vựng và nhìn lại kết quả."],
+            ].map(([number, title, description]) => (
+              <article className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4" key={number}>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ice-gold/10 text-xs font-bold text-ice-gold ring-1 ring-ice-gold/20">{number}</span>
+                <div>
+                  <h3 className="text-sm font-bold text-white">{title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-300">{description}</p>
+                </div>
+              </article>
+            ))}
           </div>
-
-          <div className="mt-7 text-center">
-            <h2 className="mt-4 text-3xl font-extrabold leading-[1.3] tracking-tight text-white xl:text-[2.5rem]">
-              Sẵn sàng chinh phục <br />
-              <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent drop-shadow-md">
-                Đại học mơ ước
-              </span>
-              <br />
-              {/* Khối chứa chữ "cùng" và Logo được tinh chỉnh khoảng cách */}
-              <span className="mt-3 inline-flex items-center gap-3 xl:mt-4 xl:gap-4">
-                {/* Chữ "cùng" chuyển sang màu xám sáng để làm nền, nhường sự nổi bật cho cụm từ trên và logo */}
-                <span className="text-2xl font-bold text-slate-300 xl:text-[2.2rem]">
-                  Cùng
-                </span>
-
-                {/* Vùng chứa Logo: Tinh giản, sáng mịn và sang trọng hơn */}
-                <span className="relative flex shrink-0 items-center justify-center">
-                  {/* 1. Lớp hào quang: Mở rộng vùng tỏa sáng (-inset-1), dùng màu sáng nhẹ và làm nhòe mềm mại (blur-lg) */}
-                  <span className="absolute -inset-1 rounded-full bg-cyan-400 opacity-30 blur-lg animate-pulse"></span>
-
-                  {/* 2. Lớp chứa logo: Viền mỏng nhẹ thanh lịch (ring-1 ring-white/50), đổ bóng êm dịu */}
-                  <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-lg shadow-cyan-500/40 ring-1 ring-white/50 xl:h-16 xl:w-16">
-                    <img
-                      alt="Logo"
-                      className="h-full w-full object-contain p-2"
-                      src="/logo-mobile"
-                    />
-                  </span>
-                </span>
-              </span>
-            </h2>
-            <p className="mt-4 text-[15px] font-inter leading-relaxed text-slate-300/90">
-              Nền tảng học tập thông minh giúp bạn làm chủ kiến thức, tối ưu hóa
-              thời gian và sẵn sàng cho kỳ thi THPT Quốc Gia.
-            </p>
-          </div>
-
-          <div className="mt-8 grid w-full gap-3 text-left">
-            <article className="group flex items-start gap-3.5 rounded-2xl border border-white/5 bg-white/[0.03] p-4 backdrop-blur-md transition-all hover:bg-white/[0.06] hover:shadow-lg hover:shadow-cyan-900/10">
-              <span className="flex h-10 w-10 font-p shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-blue-400/10 text-xs font-bold text-cyan-300 shadow-inner ring-1 ring-white/10 group-hover:from-cyan-400/30">
-                01
-              </span>
-              <div>
-                <h3 className="font-lexend text-[14px] font-bold text-white transition-colors group-hover:text-cyan-200">
-                  Luyện đề thực chiến
-                </h3>
-                <p className="mt-1 font-google-sans text-[13px] font-medium leading-relaxed text-slate-400">
-                  Ngân hàng câu hỏi bám sát cấu trúc đề thi thật, giúp bạn rèn
-                  luyện phản xạ.
-                </p>
-              </div>
-            </article>
-
-            <article className="group flex items-start gap-3.5 rounded-2xl border border-white/5 bg-white/[0.03] p-4 backdrop-blur-md transition-all hover:bg-white/[0.06] hover:shadow-lg hover:shadow-cyan-900/10">
-              <span className="flex font-p h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-blue-400/10 text-xs font-bold text-cyan-300 shadow-inner ring-1 ring-white/10 group-hover:from-cyan-400/30">
-                02
-              </span>
-              <div>
-                <h3 className="font-lexend text-[14px] font-bold text-white transition-colors group-hover:text-cyan-200">
-                  Phòng thi ảo
-                </h3>
-                <p className="mt-1 font-google-sans text-[13px] font-medium leading-relaxed text-slate-400">
-                  Mô phỏng áp lực thời gian thực tế, rèn luyện bản lĩnh phòng
-                  thi hiệu quả.
-                </p>
-              </div>
-            </article>
-
-            <article className="group flex items-start gap-3.5 rounded-2xl border border-white/5 bg-white/[0.03] p-4 backdrop-blur-md transition-all hover:bg-white/[0.06] hover:shadow-lg hover:shadow-cyan-900/10">
-              <span className="flex font-p h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-blue-400/10 text-xs font-bold text-cyan-300 shadow-inner ring-1 ring-white/10 group-hover:from-cyan-400/30">
-                03
-              </span>
-              <div>
-                <h3 className="font-lexend text-[14px] font-bold text-white transition-colors group-hover:text-cyan-200">
-                  Lấp lỗ hổng kiến thức
-                </h3>
-                <p className="mt-1 font-google-sans text-[13px] font-medium leading-relaxed text-slate-400">
-                  Hệ thống bài giảng trực quan giúp bạn nắm bắt ngay những phần
-                  còn yếu.
-                </p>
-              </div>
-            </article>
-          </div>
+          <p className="mt-8 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Innovative · Creative · Effective</p>
         </div>
       </section>
     </main>

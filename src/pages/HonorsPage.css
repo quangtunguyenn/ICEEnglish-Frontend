@@ -1,0 +1,542 @@
+body:has(.honors-page) footer {
+  margin-top: 0;
+}
+
+.honors-page {
+  overflow: clip;
+  background: #fff;
+  color: #10233f;
+  font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.honors-shell {
+  width: min(100% - 3rem, 1200px);
+  margin: 0 auto;
+}
+
+.honors-hero {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 75% 20%, #2d4d7e, transparent 40%),
+    linear-gradient(130deg, #091a38, #102b5c 70%, #193c70);
+  padding: clamp(4.5rem, 8vw, 7rem) 0;
+  color: #fff;
+}
+
+.honors-hero-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.75fr);
+  align-items: center;
+  gap: clamp(3rem, 7vw, 7rem);
+}
+
+.honors-kicker,
+.honors-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: #80600d;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.honors-kicker {
+  color: #f5cb67;
+}
+
+.honors-kicker > span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #f5b82e;
+  box-shadow: 0 0 0 0.3rem #f5b82e20;
+}
+
+.honors-hero h1 {
+  margin: 1.4rem 0 0;
+  font-size: clamp(3rem, 4.7vw, 4.8rem);
+  font-weight: 750;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+}
+
+.honors-hero h1 em,
+.honors-next h2 em {
+  color: #f5c955;
+  font-style: normal;
+}
+
+.honors-hero p,
+.honors-next p {
+  max-width: 35rem;
+  margin: 1.4rem 0 0;
+  color: #d3e0ef;
+  line-height: 1.8;
+}
+
+.honors-hero-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  border: 1px solid #ffffff50;
+  border-radius: 0.7rem;
+  padding: 0.9rem 1.1rem;
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 700;
+  transition: background 200ms ease, transform 200ms ease;
+}
+
+.honors-hero-link:hover {
+  transform: translateY(-2px);
+  background: #ffffff14;
+}
+
+.honors-page a:focus-visible,
+.honors-page summary:focus-visible {
+  outline: 3px solid #f5b82e;
+  outline-offset: 4px;
+}
+
+.honors-hero-art {
+  position: relative;
+  display: grid;
+  min-height: 330px;
+  place-items: center;
+}
+
+.honors-hero-ring {
+  position: absolute;
+  width: min(90%, 380px);
+  aspect-ratio: 1;
+  border: 1px solid #f5c95535;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2.5rem #ffffff06;
+}
+
+.honors-hero-mark {
+  position: relative;
+  width: min(85%, 330px);
+  border: 1px solid #ffffff35;
+  border-radius: 1.2rem;
+  background: linear-gradient(145deg, #ffffff1f, #ffffff08);
+  padding: 2rem;
+  box-shadow: 0 2rem 5rem #050f253d;
+  transform: rotate(-4deg);
+}
+
+.honors-hero-mark > span,
+.honors-hero-mark small {
+  color: #f5cb67;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.honors-hero-mark strong {
+  display: block;
+  margin-top: 2rem;
+  font-size: clamp(1.7rem, 3vw, 2.25rem);
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+
+.honors-hero-mark strong em {
+  color: #f5c955;
+  font-style: normal;
+}
+
+.honors-hero-mark div {
+  height: 1px;
+  margin: 2rem 0 1.2rem;
+  background: #ffffff2b;
+}
+
+.honors-hero-mark small {
+  color: #d3e0ef;
+  font-size: 0.57rem;
+}
+
+.honors-hero-spark {
+  position: absolute;
+  top: 5%;
+  right: 6%;
+  color: #f5c955;
+  font-size: 2rem;
+}
+
+.honors-editions,
+.honors-students,
+.honors-next {
+  padding: clamp(4.5rem, 8vw, 7rem) 0;
+}
+
+.honors-editions,
+.honors-students {
+  scroll-margin-top: 5rem;
+}
+
+.honors-section-heading h2,
+.honors-students-heading h2,
+.honors-next h2 {
+  margin: 1rem 0 0;
+  font-size: clamp(2.3rem, 4vw, 3.8rem);
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  line-height: 1.13;
+}
+
+.honors-section-heading h2 span,
+.honors-students-heading h2 span {
+  color: #2755a0;
+}
+
+.honors-section-heading > p,
+.honors-students-heading > p {
+  max-width: 35rem;
+  margin: 1.2rem 0 0;
+  color: #526678;
+  line-height: 1.8;
+}
+
+.honors-edition-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, 0.45fr);
+  align-items: center;
+  gap: 2rem;
+  margin-top: 2.5rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 1.25rem;
+  background: radial-gradient(circle at 90% 15%, #e8f0fd, transparent 40%), #f8fafd;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  transition: transform 250ms ease, box-shadow 250ms ease, border-color 250ms ease;
+}
+
+.honors-edition-card:hover {
+  transform: translateY(-4px);
+  border-color: #b7cbe7;
+  box-shadow: 0 1.5rem 3rem #102b5c12;
+}
+
+.honors-edition-label {
+  color: #80600d;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.honors-edition-card h3 {
+  margin: 1rem 0 0;
+  color: #102b5c;
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+
+.honors-edition-card p {
+  margin: 0.9rem 0 0;
+  color: #526678;
+  line-height: 1.7;
+}
+
+.honors-edition-action {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-top: 1.4rem;
+  color: #204e96;
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.honors-edition-number {
+  display: flex;
+  min-height: 180px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d1dff0;
+  border-radius: 1rem;
+  background: #ffffffbd;
+  color: #183e78;
+}
+
+.honors-edition-number small,
+.honors-edition-number span {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.honors-edition-number strong {
+  color: #dba52d;
+  font-size: 5rem;
+  font-weight: 750;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.honors-students {
+  background: #f2f6fc;
+}
+
+.honors-students-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  align-items: end;
+  gap: 2rem;
+}
+
+.honors-student-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.4rem;
+  margin-top: 2.8rem;
+}
+
+.honors-student-card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #d1e1f3;
+  border-radius: 1.25rem;
+  background: radial-gradient(circle at 100% 0, #cee3fc 0, transparent 40%),
+    linear-gradient(155deg, #fff 20%, #edf5ff 75%, #dcecff);
+  padding: clamp(1.25rem, 2.5vw, 2rem);
+  box-shadow: 0 1rem 2.5rem #102b5c12;
+}
+
+.honors-student-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.honors-student-label {
+  display: inline-flex;
+  border-radius: 0.35rem;
+  background: #153f7b;
+  padding: 0.5rem 0.7rem;
+  color: #fff;
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.honors-student-spark {
+  color: #d29a1a;
+  font-size: 1.3rem;
+}
+
+.honors-student-card h3 {
+  margin: 1.15rem 0 1.2rem;
+  overflow-wrap: anywhere;
+  color: #153f7b;
+  font-size: clamp(1.35rem, 2.1vw, 1.8rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.honors-poster-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: start;
+  gap: 1rem;
+}
+
+.honors-poster-copy {
+  min-width: 0;
+}
+
+.honors-portrait {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 0.85rem;
+  background: linear-gradient(145deg, #d6e8fa, #a9c8ea);
+  color: #315a93;
+  box-shadow: 0 0.65rem 1.8rem #102b5c1a;
+  font-size: 3rem;
+  font-weight: 750;
+}
+
+.honors-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 35%;
+}
+
+.honors-scores {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+}
+
+.honors-scores dt {
+  color: #425f82;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.honors-scores dd {
+  margin: 0.15rem 0 0;
+  color: #204e96;
+  font-size: 1.2rem;
+  font-weight: 750;
+  line-height: 1.15;
+}
+
+.honors-scores > div:last-child dd {
+  color: #1754ac;
+  font-size: clamp(2.4rem, 4vw, 3.6rem);
+  letter-spacing: -0.06em;
+}
+
+.honors-scores .honors-score-missing {
+  font-size: 0.77rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.honors-quote-preview {
+  position: relative;
+  overflow: hidden;
+  margin-top: 1rem;
+  border-radius: 0.7rem;
+  background: linear-gradient(145deg, #245ca3, #12376f);
+  padding: 0.85rem;
+  color: #fff;
+}
+
+.honors-quote-preview::after {
+  position: absolute;
+  right: 0.35rem;
+  bottom: -1.6rem;
+  color: #ffffff20;
+  content: "”";
+  font-size: 5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.honors-quote-preview span {
+  color: #f6d88c;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.honors-quote-preview p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0.45rem 0 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  font-size: 0.77rem;
+  line-height: 1.55;
+}
+
+.honors-card-message {
+  margin: 1rem 0 0;
+  border-left: 2px solid #dca527;
+  padding-left: 0.7rem;
+  color: #526f91;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.honors-feedback {
+  margin-top: 1.15rem;
+  border-top: 1px solid #c9daed;
+  padding-top: 1rem;
+}
+
+.honors-feedback summary {
+  color: #204e96;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.honors-feedback blockquote {
+  margin: 1rem 0 0;
+  border-left: 2px solid #e6b342;
+  padding-left: 0.9rem;
+  color: #365578;
+  font-size: 0.86rem;
+  line-height: 1.75;
+}
+
+.honors-next {
+  background: linear-gradient(120deg, #091a38, #102b5c 65%, #193c70);
+  color: #fff;
+}
+
+.honors-next-layout {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.honors-next-link {
+  display: inline-flex;
+  min-height: 3.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  border-radius: 0.75rem;
+  background: #f5bd3c;
+  padding: 0.85rem 1.2rem;
+  color: #102b5c;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+@media (max-width: 767px) {
+  .honors-shell {
+    width: min(100% - 2rem, 620px);
+  }
+
+  .honors-hero-layout,
+  .honors-students-heading {
+    grid-template-columns: 1fr;
+  }
+
+  .honors-hero h1 {
+    font-size: clamp(2.65rem, 9.5vw, 4rem);
+  }
+
+  .honors-hero-art {
+    min-height: 280px;
+  }
+
+  .honors-edition-card {
+    grid-template-columns: 1fr;
+  }
+
+  .honors-edition-number {
+    min-height: 140px;
+  }
+
+  .honors-next-layout {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .honors-student-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

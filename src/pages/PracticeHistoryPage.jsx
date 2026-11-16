@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { PageIntro } from '../components/PageIntro'
+import { BrandPageIntro } from '../components/PageIntro'
 import { getApiErrorMessage, getPracticeHistory } from '../services/api'
 import { formatPracticeSubmissionDate } from '../utils/practiceHistory'
 
@@ -220,7 +220,7 @@ function PracticeHistoryContent({ examId }) {
   const hasItems = Boolean(history && history.items.length > 0)
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12 md:py-16">
+    <div className="mx-auto max-w-[1400px] px-4 py-10 sm:px-6 sm:py-16">
       <Link
         className="mb-6 inline-flex items-center gap-2 rounded-md text-sm font-semibold text-slate-500 transition-colors hover:text-ice-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ice-navy/40"
         to="/luyen-de"
@@ -229,13 +229,14 @@ function PracticeHistoryContent({ examId }) {
         Trở về danh sách luyện đề
       </Link>
 
-      <PageIntro
+      <BrandPageIntro
         description={history?.examTitle || 'Danh sách các lần nộp bài và thành tích của bạn.'}
-     
+        eyebrow="Phòng luyện tập"
+        logo
         title="LỊCH SỬ LUYỆN TẬP"
       />
 
-      <div aria-busy={isLoading} aria-live="polite">
+      <div aria-busy={isLoading} aria-live="polite" className="mx-auto max-w-5xl">
         {isLoading && !history && <ListSkeleton />}
 
         {error && (

@@ -2,6 +2,9 @@ import { useLayoutEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { MainLayout } from './layouts/MainLayout'
 import { HomePage } from './pages/HomePage'
+import { MasterclassPage } from './pages/MasterclassPage'
+import { AboutPage } from './pages/AboutPage'
+import { HonorsPage } from './pages/HonorsPage'
 import { LoginPage } from './pages/LoginPage'
 import { MockExamPage } from './pages/MockExamPage'
 import { MockExamEntrance } from './pages/MockExamEntrance'
@@ -27,6 +30,9 @@ function App() {
         <Route path="/quan-tri" element={<AdminPage />} />
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/khoa-hoc/ice-masterclass" element={<MasterclassPage />} />
+          <Route path="/ve-chung-toi" element={<AboutPage />} />
+          <Route path="/vinh-danh" element={<HonorsPage />} />
           <Route path="/luyen-de" element={<PracticePage />} />
           <Route path="/luyen-de/:examId" element={<ExamEntryPage />} />
           <Route path="/luyen-de/:examId/lich-su" element={<StudentOnlyPage><PracticeHistoryPage /></StudentOnlyPage>} />

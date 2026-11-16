@@ -1,15 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ExamSearchForm } from "../components/ExamListControls";
+import { ExamPager, ExamSearchForm } from "../components/ExamListControls";
 import { BrandPageIntro } from "../components/PageIntro";
 import { useGuestMode } from "../hooks/useGuestMode";
-import {
-  getApiErrorMessage,
-  getGeneralExams,
-  getGuestExams,
-} from "../services/api";
+import { PAGE_SIZE, useExamPagination } from "../hooks/useExamPagination";
 
-const FETCH_SIZE = 10;
 const SKELETON_COUNT = 7;
 const PREVIEW_DELAY_MS = 70;
 const CLOSE_DELAY_MS = 200;
@@ -61,15 +56,6 @@ function formatScore(value) {
   return value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
 }
 
-// Tìm kiếm không phân biệt hoa thường và dấu: "de 01" khớp "Đề 01".
-function foldText(text) {
-  return String(text || "")
-    .toLocaleLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d");
-}
-
 // Màu không phải là kênh duy nhất: luôn đi kèm nhãn chữ.
 function getScoreTone(value) {
   if (value >= 8)
@@ -109,24 +95,6 @@ function getMilestoneText(value) {
   if (value >= 5)
     return `Còn ${formatScore(8 - value)} điểm nữa để đạt mốc Rất tốt.`;
   return `Còn ${formatScore(5 - value)} điểm nữa để đạt mốc Đạt.`;
-}
-
-// Tải toàn bộ đề: duyệt qua mọi trang của API phân trang.
-async function fetchAllGeneralExams() {
-  const all = [];
-  let page = 0;
-  let totalPages = 1;
-  while (page < totalPages && page < 200) {
-    const result = await getGeneralExams({
-      page,
-      size: FETCH_SIZE,
-      keyword: "",
-    });
-    all.push(...result.items);
-    totalPages = Number(result.totalPages) || 0;
-    page += 1;
-  }
-  return all;
 }
 
 /* ---------- Thành phần nhỏ ---------- */
@@ -548,7 +516,7 @@ function ExamRow({
           </span>
 
           <span className="min-w-0 flex-1">
-            <span className="line-clamp-2 block font-gf text-xl font-bold leading-snug text-slate-900">
+            <span className="block break-words font-gf text-xl font-bold leading-snug text-slate-900">
               {title}
             </span>
             {!guest && (
@@ -619,11 +587,15 @@ function ListSkeleton() {
 export function PracticePage() {
   const location = useLocation();
   const guest = useGuestMode();
-  const [exams, setExams] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [retry, setRetry] = useState(0);
-  const [keywordInput, setKeywordInput] = useState("");
+  const {
+    exams, loading, error, retry, keyword, keywordInput, setKeywordInput,
+    page, setPage, totalPages, totalElements,
+  } = useExamPagination({
+    guest,
+    mode: "GENERAL_EXAM",
+    getTitle,
+    errorMessage: "Không thể tải danh sách bài thi. Vui lòng thử lại.",
+  });
   const [activeId, setActiveId] = useState(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [openCount, setOpenCount] = useState(0);
@@ -634,51 +606,15 @@ export function PracticePage() {
   const openRef = useRef(false);
   const pointerInside = useRef(false);
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError("");
-
-    const request = guest
-      ? getGuestExams("GENERAL_EXAM")
-      : fetchAllGeneralExams();
-
-    request
-      .then((items) => {
-        if (active) setExams(items);
-      })
-      .catch((requestError) => {
-        if (active)
-          setError(
-            getApiErrorMessage(
-              requestError,
-              "Không thể tải danh sách bài thi. Vui lòng thử lại.",
-            ),
-          );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [guest, retry]);
-
   useEffect(
     () => () => {
       clearTimeout(previewTimer.current);
       clearTimeout(closeTimer.current);
     },
-    [],
+    [guest],
   );
 
-  const keyword = keywordInput.trim();
-  const visibleExams = useMemo(() => {
-    if (!keyword) return exams;
-    const needle = foldText(keyword);
-    return exams.filter((exam) => foldText(getTitle(exam)).includes(needle));
-  }, [exams, keyword]);
+  const visibleExams = exams;
 
   const activeIndex = Math.max(
     0,
@@ -699,6 +635,28 @@ export function PracticePage() {
   function closePanel() {
     openRef.current = false;
     setPanelOpen(false);
+  }
+
+  function changePage(nextPage) {
+    clearTimeout(previewTimer.current);
+    clearTimeout(closeTimer.current);
+    pointerInside.current = false;
+    closePanel();
+    setActiveId(null);
+    setPage(nextPage);
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }
+
+  function changeKeyword(value) {
+    clearTimeout(previewTimer.current);
+    clearTimeout(closeTimer.current);
+    pointerInside.current = false;
+    closePanel();
+    setActiveId(null);
+    setKeywordInput(value);
   }
 
   // Rê chuột có độ trễ ngắn để lướt qua các dòng không làm bảng chi tiết nhấp nháy.
@@ -826,7 +784,7 @@ export function PracticePage() {
 
       <ExamSearchForm
         keywordInput={keywordInput}
-        onKeywordChange={setKeywordInput}
+        onKeywordChange={changeKeyword}
         student
       />
 
@@ -848,7 +806,7 @@ export function PracticePage() {
                 <span className="font-semibold text-slate-900">
                   {attemptedCount}/{exams.length}
                 </span>{" "}
-                đề
+                đề trên trang này
               </p>
             </div>
           )}
@@ -867,7 +825,7 @@ export function PracticePage() {
           <p className="text-sm font-medium text-red-700">{error}</p>
           <button
             className={`rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 ${FOCUS_RING}`}
-            onClick={() => setRetry((current) => current + 1)}
+            onClick={retry}
             type="button"
           >
             Thử lại
@@ -885,7 +843,7 @@ export function PracticePage() {
           {keyword && (
             <button
               className={`mt-3 rounded-lg px-3 py-1.5 text-sm font-semibold ${NAVY_TEXT} underline ${FOCUS_RING}`}
-              onClick={() => setKeywordInput("")}
+              onClick={() => changeKeyword("")}
               type="button"
             >
               Xóa từ khóa
@@ -907,7 +865,7 @@ export function PracticePage() {
             </p>
           </div>
           <p className="text-sm font-semibold text-slate-600">
-            {visibleExams.length} đề
+            Hiển thị {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + visibleExams.length} / {totalElements} đề
           </p>
         </div>
       )}
@@ -950,6 +908,14 @@ export function PracticePage() {
             openCount={openCount}
           />
         </div>
+      )}
+      {!error && (
+        <ExamPager
+          loading={loading}
+          onPageChange={changePage}
+          page={page}
+          totalPages={totalPages}
+        />
       )}
     </div>
   );

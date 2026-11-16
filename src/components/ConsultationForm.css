@@ -94,10 +94,8 @@
   color: #991b1b;
 }
 
-.consultation-form .consultation-notice.is-success {
-  border-color: #15803d;
-  background: #f0fdf4;
-  color: #166534;
+.consultation-fields input[aria-invalid="true"] {
+  border-color: #b91c1c;
 }
 
 .consultation-form button {
@@ -120,6 +118,59 @@
 .consultation-form button:disabled {
   background: #8794a6;
   cursor: not-allowed;
+}
+
+.consultation-dialog {
+  width: min(27rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  margin: auto;
+  border: 1px solid #dce3ee;
+  border-radius: 1.25rem;
+  background: #fff;
+  padding: 2rem;
+  color: #102b5c;
+  text-align: center;
+  box-shadow: 0 1.5rem 5rem #07152e40;
+}
+
+.consultation-dialog::backdrop {
+  background: #07152eb3;
+}
+
+.consultation-dialog-icon {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  margin: 0 auto 1rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8f7ed;
+  color: #15803d;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.consultation-dialog h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.consultation-dialog p {
+  margin: 0.8rem 0 0;
+  color: #526178;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.consultation-form .consultation-dialog button {
+  margin-top: 1.5rem;
+}
+
+.consultation-form .consultation-dialog button:focus-visible {
+  outline: 3px solid #f5b82e;
+  outline-offset: 3px;
 }
 
 @media (max-width: 767px) {
