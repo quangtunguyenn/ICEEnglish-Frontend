@@ -64,7 +64,7 @@ export function ConsultationAdminSection() {
   return (
     <section>
       <header className="mb-6 border-b border-slate-200 pb-5">
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">ADMIN / TEACHER</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-cyan-700"></p>
         <h1 className="mt-2 text-2xl font-black">Yêu cầu tư vấn</h1>
         <p className="mt-2 text-sm text-slate-600">Lọc theo trạng thái và ngày gửi theo giờ Việt Nam.</p>
       </header>

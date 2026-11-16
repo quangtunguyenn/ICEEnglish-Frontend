@@ -2,6 +2,23 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
+## SEO và domain triển khai
+
+Các trang công khai có title, description, canonical, Open Graph, Twitter Card và
+dữ liệu cấu trúc được cập nhật theo đường dẫn. Trang đăng nhập, quản trị, giáo
+viên, làm bài và kết quả được đánh dấu `noindex`; sitemap chỉ liệt kê các trang
+công khai.
+
+Domain production mặc định là `https://iceenglish.vn`. Nếu domain triển khai
+thay đổi, đặt `VITE_SITE_URL` khi build và cập nhật cùng domain trong
+`index.html`, `public/robots.txt` và `public/sitemap.xml`. Chỉ gửi sitemap tới
+Google Search Console sau khi domain đã hoạt động và được xác minh.
+
+Ứng dụng hiện vẫn là Vite SPA: metadata theo route được thêm sau khi JavaScript
+chạy, còn nội dung bài đọc tải từ API. Muốn bot nhận nội dung và metadata ngay
+trong HTML ban đầu, cần một bước triển khai SSR/SSG riêng; bước SEO hiện tại
+không thay đổi giao diện hay hệ thống render.
+
 ## Form tư vấn khóa học
 
 Form trên trang chủ và trang đăng nhập gửi yêu cầu công khai tới

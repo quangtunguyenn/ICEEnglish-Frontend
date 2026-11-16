@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { BrandPageIntro } from '../components/PageIntro'
 import { useGuestMode } from '../hooks/useGuestMode'
+import { updatePageSeo } from '../utils/seo'
 import {
   answerReadingQuestion,
   getApiErrorMessage,
@@ -349,6 +350,17 @@ function ReadingDetail({ blogId, guest }) {
   const generation = useRef(0)
   const highlightTimer = useRef(0)
   const panel = useSidePanel('reading-sidebar-open')
+
+  useEffect(() => {
+    if (!data?.blog) return
+    const title = `${data.blog.title} | ICE English`
+    updatePageSeo(`/doc-hieu/${encodeURIComponent(blogId)}`, {
+      title,
+      description: data.blog.summary || `Đọc bài ${data.blog.title} và luyện đọc hiểu tiếng Anh cùng ICE English.`,
+      indexable: guest,
+      type: 'article',
+    })
+  }, [blogId, data, guest])
 
   useEffect(() => {
     let active = true

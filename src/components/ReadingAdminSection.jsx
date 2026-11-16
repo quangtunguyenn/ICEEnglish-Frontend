@@ -109,7 +109,7 @@ export function ReadingAdminSection() {
 
   return (
     <section>
-      <header className="mb-6 border-b border-slate-200 pb-5"><p className="text-xs font-bold uppercase tracking-widest text-cyan-700">ADMIN</p><h1 className="mt-2 text-2xl font-black">Quản lý bài đọc</h1><p className="mt-2 text-sm text-slate-600">Import JSON tạo bản nháp; kiểm tra nội dung trước khi publish.</p></header>
+      <header className="mb-6 border-b border-slate-200 pb-5"><p className="text-xs font-bold uppercase tracking-widest text-cyan-700"> </p><h1 className="mt-2 text-2xl font-black">Quản lý bài đọc</h1><p className="mt-2 text-sm text-slate-600">Import JSON tạo bản nháp; kiểm tra nội dung trước khi publish.</p></header>
       {error && <p className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700" role="alert">{error}</p>}
       {notice && <p aria-live="polite" className="mb-4 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800">{notice}</p>}
       <form className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-5" onSubmit={handleImport}>

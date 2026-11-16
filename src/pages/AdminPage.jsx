@@ -731,13 +731,7 @@ export function AdminPage() {
               <span className="truncate font-semibold text-slate-800">{activeItem?.label}</span>
             </nav>
           </div>
-          <Link
-            className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-[#102b5c] ${focusRing}`}
-            to="/"
-          >
-            Giao diện học sinh
-            <Icon className="h-4 w-4" name="external" />
-          </Link>
+        
         </header>
 
         <main className="mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-8 lg:py-10" id="main-content">
@@ -951,7 +945,7 @@ function StudentsSection({ busy, loading, onChange, onSubmit, student }) {
   return (
     <>
       <PageHeader
-        badge="Chỉ dành cho ADMIN"
+        
         description="Xem, tìm kiếm và quản lý trạng thái tài khoản học sinh."
         title="Tài khoản học sinh"
       />
@@ -1131,7 +1125,7 @@ function ExamsSection({
                     >
                       {selected && <span aria-hidden="true" className="absolute bottom-2.5 left-0 top-2.5 w-1 rounded-r-full bg-ice-gold" />}
                       <span className={`line-clamp-2 block text-sm font-semibold ${selected ? 'text-[#102b5c]' : 'text-slate-800'}`}>{getExamTitle(exam)}</span>
-                      <span className="mt-0.5 block truncate font-mono text-[11px] text-slate-400">{id}</span>
+                      <span className="mt-0.5 block truncate font-gf text-[12px] text-slate-400">{id}</span>
                     </button>
                   </li>
                 )
@@ -1160,7 +1154,7 @@ function ExamsSection({
               <label className="text-sm font-semibold text-slate-700" htmlFor="exam-id-input">Exam ID</label>
               <div className="relative mt-1.5">
                 <input
-                  className={`${inputClass} pr-11 font-mono text-[13px]`}
+                  className={`${inputClass} pr-11 font-gf text-[15px]`}
                   id="exam-id-input"
                   onChange={(event) => onExamIdChange(event.target.value)}
                   placeholder="Dán Exam ID tại đây"
