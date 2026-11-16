@@ -9,6 +9,9 @@ Form trên trang chủ và trang đăng nhập gửi yêu cầu công khai tới
 trên form, không được gửi hoặc lưu vì API không có trường tương ứng.
 ADMIN và TEACHER có thể xem, lọc theo trạng thái/ngày theo giờ Việt Nam,
 và đổi trạng thái trong trang quản trị.
+Sau khi đăng nhập, TEACHER được chuyển tới không gian riêng tại `/giao-vien`
+để trình bày thống kê thi thử; các công cụ quản lý nội dung vẫn có tại
+`/quan-tri`.
 Backend cần áp dụng migration `V10__Create_consultation_requests.sql` trước khi sử dụng.
 Khi build triển khai, đặt `VITE_API_BASE_URL` trỏ đến backend; nếu frontend và
 backend khác origin, backend phải cho phép CORS phù hợp. Mặc định production

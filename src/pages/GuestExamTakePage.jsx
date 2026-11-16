@@ -177,7 +177,7 @@ export function GuestExamTakePage() {
     [exam],
   )
   const questionCount = questionItems.length
-  const answeredCount = Object.keys(answers).length
+  const answeredCount = questionItems.filter((question) => answers[question.id] != null).length
 
   useEffect(() => {
     const question = activePart?.questions?.[questionPositions[activePartKey] || 0]

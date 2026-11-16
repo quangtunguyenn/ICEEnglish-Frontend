@@ -6,18 +6,7 @@ import {
   getAuthProfile,
   loginStudent,
 } from "../services/api";
-
-function getUserRole(user) {
-  const roles = [
-    user?.role,
-    ...(Array.isArray(user?.authorities) ? user.authorities : []),
-  ];
-  return roles.map((role) =>
-    String(role || "")
-      .toUpperCase()
-      .replace(/^ROLE_/, ""),
-  );
-}
+import { getUserRoles } from "../utils/authRoles";
 
 function getLoginErrorMessage(error) {
   if (error?.response?.status === 401)
@@ -81,7 +70,7 @@ export function LoginPage() {
         password: credentials.password,
       });
       let profile = loginResult?.user || loginResult?.student || null;
-      if (!profile || !getUserRole(profile).length) {
+      if (!profile || !getUserRoles(profile).length) {
         try {
           profile = await getAuthProfile();
         } catch (profileError) {
@@ -97,27 +86,26 @@ export function LoginPage() {
         }
       }
 
-      const roles = getUserRole(profile);
+      const roles = getUserRoles(profile);
       if (!roles.length) {
         setError(
           "Đăng nhập thành công nhưng server chưa trả về vai trò tài khoản.",
         );
         return;
       }
-      const isStaff = roles.includes("ADMIN") || roles.includes("TEACHER");
+      const isAdmin = roles.includes("ADMIN");
+      const isTeacher = roles.includes("TEACHER");
       const requestedPath = location.state?.from?.pathname
         ? `${location.state.from.pathname}${location.state.from.search || ""}`
         : "";
-      navigate(
-        isStaff
-          ? "/quan-tri"
-          : requestedPath === "/quan-tri"
+      const destination = isAdmin
+        ? "/quan-tri"
+        : isTeacher
+          ? "/giao-vien"
+          : requestedPath === "/quan-tri" || requestedPath === "/giao-vien"
             ? "/"
-            : requestedPath || "/",
-        {
-          replace: true,
-        },
-      );
+            : requestedPath || "/";
+      navigate(destination, { replace: true });
     } catch (requestError) {
       setError(getLoginErrorMessage(requestError));
     } finally {

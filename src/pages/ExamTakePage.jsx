@@ -303,7 +303,7 @@ export function ExamTakePage() {
       ) || [],
     [exam],
   )
-  const answeredCount = Object.keys(answers).length
+   const answeredCount = questionItems.filter((question) => answers[question.id] != null).length
 
   useEffect(() => {
     if (!activePart?.questions.length) return

@@ -18,6 +18,7 @@ import { VocabularyPage } from './pages/VocabularyPage'
 import { VideosPage } from './pages/VideosPage'
 import { HomeworkPage } from './pages/HomeworkPage'
 import { AdminPage } from './pages/AdminPage'
+import { TeacherPage } from './pages/TeacherPage'
 import { ReadingListPage, ReadingDetailPage, ReadingVocabularyPage } from './pages/ReadingPage'
 import { useGuestMode } from './hooks/useGuestMode'
 
@@ -28,6 +29,7 @@ function App() {
       <Routes>
         <Route path="/dang-nhap" element={<LoginPage />} />
         <Route path="/quan-tri" element={<AdminPage />} />
+        <Route path="/giao-vien" element={<TeacherPage />} />
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/khoa-hoc/ice-masterclass" element={<MasterclassPage />} />

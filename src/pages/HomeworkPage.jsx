@@ -4,6 +4,7 @@ import { ExamQuestion } from '../components/ExamQuestion'
 import { ExamIdentityBar } from '../components/ExamIdentityBar'
 import { ResultOverview } from '../components/ResultOverview'
 import { PassageViewer } from '../components/PassageViewer'
+import { SubmitConfirmationDialog } from '../components/SubmitConfirmationDialog'
 import { useExamTimer } from '../hooks/useExamTimer'
 import { useGuestMode } from '../hooks/useGuestMode'
 import {
@@ -71,6 +72,7 @@ export function HomeworkPage() {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0)
   const [loading, setLoading] = useState(() => guest || !location.state?.homework)
   const [submitting, setSubmitting] = useState(false)
+  const [submitConfirmationOpen, setSubmitConfirmationOpen] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
   const [answerUrl, setAnswerUrl] = useState('')
@@ -136,7 +138,7 @@ export function HomeworkPage() {
     ),
     [parts],
   )
-  const answeredCount = Object.keys(answers).length
+  const answeredCount = questionItems.filter((question) => answers[question.id] != null).length
   useEffect(() => {
     const question = activePart?.questions[activeQuestionIndex]
     if (question) {
@@ -381,7 +383,7 @@ export function HomeworkPage() {
         <button
           className="rounded bg-white px-4 py-1.5 font-semibold text-[#102b5c] hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
           disabled={!questionItems.length || submitting || !submission}
-          onClick={handleSubmit}
+          onClick={() => setSubmitConfirmationOpen(true)}
           type="button"
         >
           {submitting ? 'Đang nộp...' : 'Nộp bài'}
@@ -448,6 +450,16 @@ export function HomeworkPage() {
         ))}
         {error && <p className="col-span-full text-xs text-red-600">{error}</p>}
       </footer>
+      {submitConfirmationOpen && (
+        <SubmitConfirmationDialog
+          onCancel={() => setSubmitConfirmationOpen(false)}
+          onConfirm={() => {
+            setSubmitConfirmationOpen(false)
+            handleSubmit()
+          }}
+          unansweredCount={Math.max(0, questionItems.length - answeredCount)}
+        />
+      )}
       {(!hasEnteredFullscreen || securityWarning) && (
         <div aria-modal="true" className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/75 p-6 backdrop-blur-sm" role="dialog">
           <div className="w-full max-w-md rounded-xl bg-white p-6 text-center shadow-2xl">

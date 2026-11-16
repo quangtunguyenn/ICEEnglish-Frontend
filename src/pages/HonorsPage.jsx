@@ -52,7 +52,7 @@ function StudentCard({ student }) {
     <article className="honors-student-card" data-page-reveal>
       <div className="honors-student-heading">
         <span className="honors-student-label">VINH DANH HỌC SINH ICE</span>
-        <span aria-hidden="true" className="honors-student-spark">✦</span>
+        <img alt="" aria-hidden="true" className="honors-student-logo" src="/ice_english_emblem_vector.svg" />
       </div>
       <h3>{student.name}</h3>
       <div className="honors-poster-grid">

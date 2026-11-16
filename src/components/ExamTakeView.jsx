@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ExamIdentityBar } from './ExamIdentityBar'
 import { ExamQuestion } from './ExamQuestion'
 import { PassageViewer } from './PassageViewer'
+import { SubmitConfirmationDialog } from './SubmitConfirmationDialog'
 
 function formatTime(seconds) {
   return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`
@@ -16,6 +17,7 @@ export function ExamTakeView({
   candidateName = 'Thí sinh', candidateSbd = '—', examStartedAt, guest = false,
 }) {
   const [highlightedPassages, setHighlightedPassages] = useState({})
+  const [submitConfirmationOpen, setSubmitConfirmationOpen] = useState(false)
   const [securityWarning, setSecurityWarning] = useState(false)
   const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(
     () => typeof document !== 'undefined' && Boolean(document.fullscreenElement),
@@ -82,7 +84,7 @@ export function ExamTakeView({
         <button
           className="rounded bg-white px-4 py-1.5 font-bold text-[#102b5c] hover:bg-blue-50 disabled:cursor-wait disabled:opacity-50"
           disabled={submitting}
-          onClick={handleSubmit}
+          onClick={() => setSubmitConfirmationOpen(true)}
           type="button"
         >
           {submitting ? 'Đang nộp...' : isMock && mockExpired ? 'Thử nộp lại' : 'Nộp bài'}
@@ -189,6 +191,16 @@ export function ExamTakeView({
         ))}
         {!isMock && error && <p className="col-span-full text-xs text-red-600">{error}</p>}
       </footer>
+      {submitConfirmationOpen && (
+        <SubmitConfirmationDialog
+          onCancel={() => setSubmitConfirmationOpen(false)}
+          onConfirm={() => {
+            setSubmitConfirmationOpen(false)
+            handleSubmit()
+          }}
+          unansweredCount={Math.max(0, questionCount - answeredCount)}
+        />
+      )}
       {(!isMock || !mockExpired) && (!hasEnteredFullscreen || securityWarning) && (
         <div
           aria-modal="true"

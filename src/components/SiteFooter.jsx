@@ -115,7 +115,7 @@ export function SiteFooter() {
       <div aria-hidden="true" className="pointer-events-none absolute -left-32 top-0 h-96 w-96 rounded-full bg-[#1c447b]/30 blur-3xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-ice-gold/[0.07] blur-3xl" />
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ice-gold/70 to-transparent" />
-      <img alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-28 -right-20 hidden w-[440px] opacity-[0.035] grayscale invert md:block" src="/ice_english_emblem_vector.svg" />
+      <img alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-28 -right-20 hidden w-[440px] opacity-[0.05] brightness-0 invert md:block" src="/ice_english_emblem_vector.svg" />
 
       <div className="relative mx-auto w-full max-w-[1400px] px-6 sm:px-8 lg:flex lg:min-h-svh lg:flex-col lg:justify-between lg:px-12">
         <div className="flex flex-col gap-7 border-b border-white/10 py-12 md:flex-row md:items-end md:justify-between md:py-14 lg:py-6">

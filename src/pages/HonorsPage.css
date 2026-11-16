@@ -326,9 +326,9 @@ body:has(.honors-page) footer {
   letter-spacing: 0.08em;
 }
 
-.honors-student-spark {
-  color: #d29a1a;
-  font-size: 1.3rem;
+.honors-student-logo {
+  width: 2rem;
+  opacity: 0.18;
 }
 
 .honors-student-card h3 {

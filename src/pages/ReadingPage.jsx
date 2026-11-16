@@ -761,8 +761,8 @@ function Flashcard({ vocabulary, isFlipped, onFlip }) {
               tabIndex={0}
             >
               <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden rounded-3xl bg-ice-navy p-8 text-center text-white shadow-2xl" style={face}>
+                <img alt="" aria-hidden="true" className="pointer-events-none absolute bottom-2 right-2 w-8 opacity-20 mix-blend-screen grayscale invert sm:bottom-4 sm:right-4 sm:w-14" src="/ice_english_emblem_vector.svg" />
                 <span aria-hidden="true" className="absolute bottom-6 left-5 top-6 w-2.5 rounded-full bg-ice-gold" />
-                <span aria-hidden="true" className="pointer-events-none absolute -bottom-12 -right-2 text-[13rem] font-black leading-none text-white/5">{String(vocabulary.word).charAt(0)}</span>
                 <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0" data-glare />
                 <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">Tiếng Anh</span>
                 <h3 className="mt-5 max-w-full break-words text-4xl font-extrabold tracking-tight text-white sm:text-6xl">{vocabulary.word}</h3>
@@ -771,6 +771,7 @@ function Flashcard({ vocabulary, isFlipped, onFlip }) {
               </div>
 
               <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden rounded-3xl bg-white p-8 text-center shadow-2xl ring-1 ring-ice-navy/10" style={{ ...face, transform: 'rotateY(180deg)' }}>
+                <img alt="" aria-hidden="true" className="pointer-events-none absolute bottom-2 right-2 w-8 opacity-15 mix-blend-multiply sm:bottom-4 sm:right-4 sm:w-14" src="/ice_english_emblem_vector.svg" />
                 <span aria-hidden="true" className="absolute inset-x-0 top-0 h-2 bg-ice-gold" />
                 <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-ice-gold/30 to-transparent opacity-0" data-glare />
                 <span className="rounded-full bg-ice-gold/15 px-3 py-1 text-xs font-semibold text-ice-gold-700">Nghĩa tiếng Việt</span>

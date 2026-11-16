@@ -39,6 +39,7 @@ test('honors page preserves each student result, available photo and feedback', 
     assert.ok(card, `Missing student: ${name}`)
     assert.ok(card.includes(`>${before ?? 'Chưa có thông tin'}</dd>`))
     assert.ok(card.includes(`>${after}</dd>`))
+    assert.match(card, /class="honors-student-logo" src="\/ice_english_emblem_vector\.svg"/)
     assert.equal(card.includes(`src="/${name}.jpg"`), photo)
     assert.equal(card.includes('<blockquote>'), feedback)
     assert.equal(card.includes('class="honors-quote-preview"'), feedback)
