@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMatch, useNavigate, useParams } from "react-router-dom";
 import { ExamTakeView } from "../components/ExamTakeView";
 import { useExamTimer } from "../hooks/useExamTimer";
+import { useActivePartTracking } from "../hooks/useActivePartTracking";
 import {
   getApiErrorMessage,
   getExam,
@@ -18,17 +19,7 @@ import {
   writeMockDraft,
 } from "../utils/mockDraft";
 import { getServerRemainingMs } from "../utils/serverTime";
-
-function getDurationSeconds(exam) {
-  const duration = Number(
-    exam?.durationMinutes ||
-      exam?.timeLimitMinutes ||
-      exam?.duration ||
-      exam?.timeLimit ||
-      0,
-  );
-  return duration > 0 ? duration * 60 : 0;
-}
+import { scrollExamQuestionIntoView } from "../utils/navigationScroll";
 
 function getCurrentAccountId() {
   const profile = JSON.parse(localStorage.getItem("currentUser") || "null");
@@ -60,22 +51,31 @@ export function ExamTakePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [timerUnavailable, setTimerUnavailable] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [timerStorageContext, setTimerStorageContext] = useState(null);
   const [timerStorageWarning, setTimerStorageWarning] = useState("");
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [mockDraft, setMockDraft] = useState(null);
-  const [mockExpired, setMockExpired] = useState(false);
   const [examStartedAt, setExamStartedAt] = useState("");
   const [markedQuestions, setMarkedQuestions] = useState({});
   const [questionPositions, setQuestionPositions] = useState({});
   const timerDeadlineRef = useRef(null);
-  const autoSubmittedRef = useRef(false);
   const answersTouchedRef = useRef(false);
   const loadRequestRef = useRef(null);
   const submitInFlightRef = useRef(false);
   const activePart = exam?.parts?.[partIndex];
+  const activePartId = activePart?.id || activePart?.partId;
+  const submissionIdForTracking = exam?.submissionId;
+  const sendActivePart = useCallback(
+    (partId) => setActivePart(submissionIdForTracking, partId),
+    [submissionIdForTracking],
+  );
+  const { trackingError, trackingUnavailable, retryTracking } = useActivePartTracking(
+    submissionIdForTracking ? activePartId : null,
+    sendActivePart,
+  );
   const activePartKey =
     activePart?.id || activePart?.partId || String(partIndex);
   const activeQuestionIndex = questionPositions[activePartKey] ?? 0;
@@ -94,7 +94,6 @@ export function ExamTakePage() {
     const updateRemaining = () => {
       const remainingMs = timerDeadlineRef.current - performance.now();
       setRemainingSeconds(Math.max(0, Math.ceil(remainingMs / 1000)));
-      if (remainingMs <= 0) setMockExpired(true);
     };
 
     updateRemaining();
@@ -110,7 +109,6 @@ export function ExamTakePage() {
       loadRequestRef.current.isMockRoute !== isMockRoute
     ) {
       const request = (async () => {
-        const requestStartedAt = new Date().toISOString();
         let accountId;
         let savedMock;
         if (isMockRoute) {
@@ -122,6 +120,7 @@ export function ExamTakePage() {
           savedMock = readMockDraft(localStorage, accountId, examId);
         }
         const submission = await startExam(examId);
+        const receivedAt = performance.now();
         const submissionId =
           submission.submissionId ||
           submission.submission_id ||
@@ -130,9 +129,14 @@ export function ExamTakePage() {
 
         if (!submissionId) {
           throw new Error(
-            "Backend bắt đầu bài thi nhưng không trả về submissionId.",
+            "Không thể bắt đầu bài thi lúc này. Vui lòng thử lại.",
           );
         }
+
+        if (isMockRoute && (!Number.isFinite(Date.parse(submission.serverNow)) || !Number.isFinite(Date.parse(submission.expiresAt)))) {
+          throw new Error("Không thể xác định thời hạn thi từ hệ thống. Vui lòng thử lại.");
+        }
+        const deadlineAt = isMockRoute ? receivedAt + getServerRemainingMs(submission) : null;
 
         // submissionId makes the backend return parts in this attempt's saved (possibly shuffled) order.
         const examDetail = await getExam(examId, submissionId);
@@ -143,20 +147,9 @@ export function ExamTakePage() {
           mode: submission.mode || examDetail.mode,
           submissionId,
         };
-        const attemptStartedAt = getExamStartedAt(
-          submission.startedAt,
-          submission.started_at,
-          submission.createdAt,
-          submission.created_at,
-          requestStartedAt,
-        );
+        const attemptStartedAt = getExamStartedAt(submission.startedAt);
         if (!isMockRoute) return { loadedExam, startedAt: attemptStartedAt };
 
-        const duration = getDurationSeconds(loadedExam);
-        const remainingMs = getServerRemainingMs(submission, duration * 1000);
-        if (!remainingMs && !submission.expiresAt)
-          throw new Error("Đề thi thử không có thời lượng hợp lệ.");
-        const deadlineAt = performance.now() + remainingMs;
         // A draft belongs to one attempt; if the server resumed a different one, start clean.
         const usableDraft =
           savedMock && String(savedMock.submissionId) === String(submissionId)
@@ -166,10 +159,8 @@ export function ExamTakePage() {
         const draft = usableDraft
           ? {
               ...usableDraft,
-              startedAt: getExamStartedAt(
-                usableDraft.startedAt,
-                attemptStartedAt,
-              ),
+              startedAt: attemptStartedAt,
+              deadline: expiresAtMs,
             }
           : {
               version: 1,
@@ -177,14 +168,11 @@ export function ExamTakePage() {
               examId: String(examId),
               submissionId: String(submissionId),
               startedAt: attemptStartedAt,
-              deadline: Number.isFinite(expiresAtMs)
-                ? expiresAtMs
-                : Date.now() + remainingMs,
+              deadline: expiresAtMs,
               answers: {},
               partTimes: {},
             };
-        if (!usableDraft || !usableDraft.startedAt)
-          writeMockDraft(localStorage, draft);
+        writeMockDraft(localStorage, draft);
         return {
           loadedExam,
           draft,
@@ -208,7 +196,6 @@ export function ExamTakePage() {
           setRemainingSeconds(
             Math.max(0, Math.ceil((deadlineAt - performance.now()) / 1000)),
           );
-          setMockExpired(performance.now() >= deadlineAt);
           if (restored)
             setSaveStatus({
               error: false,
@@ -384,18 +371,11 @@ export function ExamTakePage() {
       activePart.questions.length - 1,
     );
     const questionId = activePart.questions[questionIndex]?.id;
-    questionRefs.current[questionId]?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+    scrollExamQuestionIntoView(questionRefs.current[questionId]);
   }, [activePart, activeQuestionIndex]);
 
   function chooseAnswer(questionId, selectedOpt) {
-    if (
-      submitting ||
-      (isMock && (!mockDraft || performance.now() >= timerDeadlineRef.current))
-    )
-      return;
+    if (submitting || (isMock && !mockDraft)) return;
     answersTouchedRef.current = true;
     setAnswers((current) => ({ ...current, [questionId]: selectedOpt }));
     setHasUnsavedChanges(true);
@@ -403,12 +383,7 @@ export function ExamTakePage() {
 
   function handleSaveDraft() {
     if (isMock) {
-      if (
-        !mockDraft ||
-        performance.now() >= timerDeadlineRef.current ||
-        submitting
-      )
-        return;
+      if (!mockDraft || submitting) return;
       try {
         if (getCurrentAccountId() !== mockDraft.accountId) {
           throw new Error(
@@ -568,8 +543,9 @@ export function ExamTakePage() {
     try {
       result = await submitExam(payload);
       if (!result || typeof result !== "object")
-        throw new Error("Dữ liệu kết quả bài thi không hợp lệ.");
+        throw new Error("Chưa thể hiển thị kết quả bài thi. Vui lòng thử lại.");
     } catch (requestError) {
+      if (requestError?.response?.status >= 500) setTimerUnavailable(true);
       setError(
         `${getApiErrorMessage(requestError, "Không thể xác nhận nộp bài.")} Bản lưu trên máy được giữ lại; hãy kiểm tra kết quả hoặc thử nộp lại.`,
       );
@@ -628,45 +604,6 @@ export function ExamTakePage() {
     });
   }, [answers, exam, isGeneralExam, isMock, mockDraft, navigate]);
 
-  const activePartId = activePart?.id || activePart?.partId;
-  const submissionIdForTracking = exam?.submissionId;
-  useEffect(() => {
-    if (!submissionIdForTracking || !activePartId) return;
-    setActivePart(submissionIdForTracking, activePartId).catch(
-      (trackingError) => {
-        setSaveStatus({
-          error: true,
-          message: getApiErrorMessage(
-            trackingError,
-            "Không ghi nhận được part đang làm lên server. Hãy chuyển part lại để thử lần nữa.",
-          ),
-        });
-      },
-    );
-  }, [activePartId, submissionIdForTracking]);
-
-  useEffect(() => {
-    if (
-      !isMock ||
-      !exam ||
-      !mockDraft ||
-      !timerDeadlineRef.current ||
-      performance.now() < timerDeadlineRef.current ||
-      remainingSeconds > 0 ||
-      autoSubmittedRef.current
-    )
-      return;
-    autoSubmittedRef.current = true;
-    handleSubmit();
-  }, [exam, handleSubmit, isMock, mockDraft, remainingSeconds]);
-
-  useEffect(() => {
-    if (!isMock || !mockExpired) return;
-    const retryOnReconnect = () => handleSubmit();
-    window.addEventListener("online", retryOnReconnect);
-    return () => window.removeEventListener("online", retryOnReconnect);
-  }, [handleSubmit, isMock, mockExpired]);
-
   if (loading)
     return (
       <div className="p-12 text-center text-slate-600">Đang tải bài thi...</div>
@@ -696,7 +633,6 @@ export function ExamTakePage() {
       isGeneralExam={isGeneralExam}
       isMock={isMock}
       markedQuestions={markedQuestions}
-      mockExpired={mockExpired}
       partIndex={partIndex}
       questionCount={questionCount}
       questionItems={questionItems}
@@ -705,6 +641,9 @@ export function ExamTakePage() {
       saveStatus={saveStatus}
       submitting={submitting}
       timerStorageWarning={timerStorageWarning}
+      trackingError={trackingError}
+      retryTracking={retryTracking}
+      timerUnavailable={timerUnavailable || trackingUnavailable}
       toggleMark={toggleMark}
     />
   );

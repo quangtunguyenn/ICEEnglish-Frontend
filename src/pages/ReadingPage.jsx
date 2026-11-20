@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useConsultationInvite } from '../components/ConsultationInvite'
+import { FavoriteToast } from '../components/FavoriteToast'
 import { BrandPageIntro } from '../components/PageIntro'
+import { ReadingCover } from '../components/ReadingCover'
 import { useGuestMode } from '../hooks/useGuestMode'
 import { updatePageSeo } from '../utils/seo'
 import {
+  addFavoriteVocabulary,
   answerReadingQuestion,
   getApiErrorMessage,
   getReadingBlog,
@@ -50,6 +54,7 @@ const ICONS = {
   translate: 'M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129',
   quiz: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
   warning: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+  heart: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z',
 }
 
 function Icon({ name, className = 'h-5 w-5', strokeWidth = 2 }) {
@@ -135,6 +140,7 @@ export function ReadingListPage() {
 
 function ReadingList({ guest }) {
   const navigate = useNavigate()
+  const promptConsultation = useConsultationInvite()
   const [filters, setFilters] = useState({ keyword: '', topic: '', contentType: '' })
   const [query, setQuery] = useState({ page: 0, size: 12 })
   const [result, setResult] = useState(null)
@@ -148,7 +154,7 @@ function ReadingList({ guest }) {
     let active = true
     Promise.all([getReadingBlogs(guest, query), getReadingTopics(guest)])
       .then(([page, topicList]) => {
-        if (!Array.isArray(page?.items) || !Array.isArray(topicList)) throw new Error('Dữ liệu danh sách bài đọc không hợp lệ.')
+        if (!Array.isArray(page?.items) || !Array.isArray(topicList)) throw new Error('Không thể tải thư viện đọc hiểu lúc này. Vui lòng thử lại.')
         if (active) { setResult(page); setTopics(topicList) }
       })
       .catch((err) => { if (active) { setResult(null); setError(getApiErrorMessage(err, 'Không thể tải thư viện đọc hiểu.')) } })
@@ -179,7 +185,7 @@ function ReadingList({ guest }) {
 
   function openBlog(blog) {
     const path = `/doc-hieu/${encodeURIComponent(blog.id)}`
-    if (guest && !blog.accessible) navigate('/dang-nhap', { state: { from: { pathname: path } } })
+    if (guest && !blog.accessible) promptConsultation(blog.title)
     else navigate(path)
   }
 
@@ -204,11 +210,11 @@ function ReadingList({ guest }) {
             value={filters.keyword}
           />
         </div>
-        <select aria-label="Chủ đề" className={`${fieldClass} min-w-0 flex-1 sm:flex-none`} onChange={(e) => setFilters({ ...filters, topic: e.target.value })} value={filters.topic}>
+        <select aria-label="Chủ đề" className={`${fieldClass} w-full sm:w-auto`} onChange={(e) => setFilters({ ...filters, topic: e.target.value })} value={filters.topic}>
           <option value="">Tất cả chủ đề</option>
           {topics.map((topic) => <option key={topic.slug} value={topic.slug}>{topic.name}</option>)}
         </select>
-        <select aria-label="Loại bài" className={`${fieldClass} min-w-0 flex-1 sm:flex-none`} onChange={(e) => setFilters({ ...filters, contentType: e.target.value })} value={filters.contentType}>
+        <select aria-label="Loại bài" className={`${fieldClass} w-full sm:w-auto`} onChange={(e) => setFilters({ ...filters, contentType: e.target.value })} value={filters.contentType}>
           <option value="">Tất cả loại bài</option>
           <option value="ARTICLE">Bài báo</option>
           <option value="MAGAZINE">Tạp chí</option>
@@ -267,6 +273,7 @@ function ReadingList({ guest }) {
                   type="button"
                 >
                   <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-ice-gold transition-transform duration-300 group-hover:scale-x-100 motion-reduce:transition-none" />
+                  <ReadingCover className="-mx-6 -mt-6 mb-5 h-44 w-[calc(100%+3rem)] shrink-0" url={blog.coverImageUrl} />
                   <span className="flex flex-wrap gap-2">
                     <Chip>{blog.topic?.name || 'Bài đọc'}</Chip>
                     {blog.difficulty && <Chip tone="gold">{blog.difficulty}</Chip>}
@@ -366,7 +373,7 @@ function ReadingDetail({ blogId, guest }) {
     let active = true
     getReadingBlog(guest, blogId)
       .then((result) => {
-        if (!result?.blog || !Array.isArray(result.passageBlocks) || !Array.isArray(result.questions)) throw new Error('Dữ liệu bài đọc không hợp lệ.')
+        if (!result?.blog || !Array.isArray(result.passageBlocks) || !Array.isArray(result.questions)) throw new Error('Không thể mở bài đọc này lúc này. Vui lòng thử lại.')
         if (active) setData(result)
       })
       .catch((err) => { if (active) setError(getApiErrorMessage(err, 'Không thể tải bài đọc. Bài có thể không còn được phép truy cập.')) })
@@ -450,6 +457,7 @@ function ReadingDetail({ blogId, guest }) {
         <>
           <header className="mt-5 flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="min-w-0 flex-1 border-l-4 border-ice-gold pl-4">
+              <ReadingCover className="mb-5 h-48 w-full rounded-xl sm:h-64" url={data.blog.coverImageUrl} />
               <div className="flex flex-wrap gap-2">
                 {data.blog.topic?.name && <Chip>{data.blog.topic.name}</Chip>}
                 {data.blog.estimatedReadingMinutes ? <Chip tone="slate"><Icon className="h-3.5 w-3.5" name="clock" />{data.blog.estimatedReadingMinutes} phút đọc</Chip> : null}
@@ -464,12 +472,6 @@ function ReadingDetail({ blogId, guest }) {
                   <Icon className="h-4 w-4" name="book" />Từ vựng cho bài đọc này
                 </Link>
               </div>
-            </div>
-            <div className="hidden lg:block">
-              <button aria-controls="reading-panel" aria-expanded={panel.open} className={btnOutline} onClick={panel.toggle} type="button">
-                <Icon name="list" />
-                {panel.open ? 'Ẩn bảng câu hỏi' : 'Bảng câu hỏi'}
-              </button>
             </div>
           </header>
 
@@ -558,11 +560,14 @@ function ReadingDetail({ blogId, guest }) {
                           {result.questionExplanation && <p className="mt-2">{result.questionExplanation}</p>}
                           {result.evidenceBlockIds?.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-2">
-                              {result.evidenceBlockIds.map((id) => (
-                                <button className={`rounded-full bg-white px-3 py-1 text-xs font-bold text-ice-navy ring-1 ring-ice-navy/15 transition hover:bg-ice-gold/15 ${focusRing}`} key={id} onClick={() => focusPassage(id)} type="button">
-                                  Xem đoạn {id}
-                                </button>
-                              ))}
+                              {result.evidenceBlockIds.map((id) => {
+                                const passageIndex = data.passageBlocks.findIndex((block) => block.id === id)
+                                return (
+                                  <button className={`rounded-full bg-white px-3 py-1 text-xs font-bold text-ice-navy ring-1 ring-ice-navy/15 transition hover:bg-ice-gold/15 ${focusRing}`} key={id} onClick={() => focusPassage(id)} type="button">
+                                    Xem đoạn {passageIndex >= 0 ? passageIndex + 1 : id}
+                                  </button>
+                                )
+                              })}
                             </div>
                           )}
                         </div>
@@ -586,7 +591,7 @@ function ReadingDetail({ blogId, guest }) {
             <aside
               aria-hidden={!panel.open}
               aria-label="Bảng câu hỏi"
-              className={`fixed bottom-0 right-0 top-0 z-[70] flex w-80 max-w-[88vw] flex-col overflow-hidden bg-white shadow-2xl transition-[translate,width,margin,opacity,visibility] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none lg:sticky lg:bottom-auto lg:right-auto lg:top-6 lg:z-auto lg:max-w-none lg:shrink-0 lg:rounded-2xl lg:border lg:border-slate-200 lg:shadow-sm lg:duration-300 ${
+              className={`fixed bottom-0 right-0 top-0 z-[70] flex w-80 max-w-[88vw] flex-col overflow-hidden bg-white shadow-2xl transition-[translate,width,margin,opacity,visibility] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none lg:sticky lg:bottom-auto lg:right-auto lg:top-[calc(var(--sticky-header-offset,0px)+1.5rem)] lg:z-auto lg:max-w-none lg:shrink-0 lg:rounded-2xl lg:border lg:border-slate-200 lg:shadow-sm lg:duration-300 ${
                 panel.open ? 'visible translate-x-0 lg:w-72' : 'invisible translate-x-full lg:-ml-6 lg:w-0 lg:translate-x-0 lg:border-transparent lg:opacity-0'
               }`}
               id="reading-panel"
@@ -602,7 +607,7 @@ function ReadingDetail({ blogId, guest }) {
                     <Icon name="close" />
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-5">
+                <div className="flex-1 overflow-y-auto p-5 lg:max-h-[max(0px,calc(100vh-var(--sticky-header-offset,0px)-11rem))] lg:flex-none">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-bold text-ice-navy">Đã làm {answered}/{total}</span>
                     <span className="tabular-nums text-slate-500">{total ? Math.round((answered / total) * 100) : 0}%</span>
@@ -643,8 +648,8 @@ function ReadingDetail({ blogId, guest }) {
             <button
               aria-controls="reading-panel"
               aria-expanded="false"
-              className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 inline-flex items-center gap-2 rounded-full bg-ice-navy py-3 pl-4 pr-3 text-sm font-bold text-white shadow-lg ring-2 ring-ice-gold transition hover:bg-ice-navy/90 focus-visible:outline-none focus-visible:ring-4 lg:hidden"
-              onClick={() => panel.setOpen(true)}
+              className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 inline-flex items-center gap-2 rounded-full bg-ice-navy py-3 pl-4 pr-3 text-sm font-bold text-white shadow-lg ring-2 ring-ice-gold transition hover:bg-ice-navy/90 focus-visible:outline-none focus-visible:ring-4"
+              onClick={panel.toggle}
               type="button"
             >
               <Icon className="h-5 w-5 text-ice-gold" name="list" />
@@ -821,19 +826,28 @@ export function ReadingVocabularyPage() {
 }
 
 function ReadingVocabulary({ blogId, guest }) {
+  const promptConsultation = useConsultationInvite()
   const [words, setWords] = useState(null)
   const [error, setError] = useState('')
+  const [favoriteError, setFavoriteError] = useState('')
+  const [favoriteToast, setFavoriteToast] = useState(null)
+  const [favoriteSaving, setFavoriteSaving] = useState(false)
   const [retry, setRetry] = useState(0)
   const [order, setOrder] = useState(null)
   const [index, setIndex] = useState(0)
   const [direction, setDirection] = useState('next')
   const [flipped, setFlipped] = useState(false)
+  const favoriteToastTimeout = useRef(null)
+
+  useEffect(() => () => {
+    if (favoriteToastTimeout.current) clearTimeout(favoriteToastTimeout.current)
+  }, [])
 
   useEffect(() => {
     let active = true
     getReadingVocabularies(guest, blogId)
       .then((items) => {
-        if (!Array.isArray(items)) throw new Error('Dữ liệu từ vựng không hợp lệ.')
+        if (!Array.isArray(items)) throw new Error('Không thể tải từ vựng của bài đọc lúc này. Vui lòng thử lại.')
         if (active) setWords(items)
       })
       .catch((err) => { if (active) setError(getApiErrorMessage(err, 'Không thể tải từ vựng bài đọc.')) })
@@ -852,6 +866,29 @@ function ReadingVocabulary({ blogId, guest }) {
   }
   const shuffleDeck = () => { setOrder(shuffleIndexes(words.length)); setDirection('prev'); setIndex(0); setFlipped(false) }
   const resetDeck = () => { setOrder(null); setDirection('prev'); setIndex(0); setFlipped(false) }
+
+  async function addWordToFavorites(vocabulary) {
+    if (guest) {
+      promptConsultation(`Thêm “${vocabulary.word}” vào flashcard yêu thích`)
+      return
+    }
+
+    setFavoriteError('')
+    setFavoriteSaving(true)
+    try {
+      await addFavoriteVocabulary({
+        word: vocabulary.word,
+        meaning: vocabulary.meaning,
+      })
+      setFavoriteToast((current) => ({ word: vocabulary.word, variant: 'added', id: (current?.id ?? 0) + 1 }))
+      if (favoriteToastTimeout.current) clearTimeout(favoriteToastTimeout.current)
+      favoriteToastTimeout.current = setTimeout(() => setFavoriteToast(null), 2400)
+    } catch (requestError) {
+      setFavoriteError(getApiErrorMessage(requestError, 'Không thể thêm flashcard yêu thích.'))
+    } finally {
+      setFavoriteSaving(false)
+    }
+  }
 
   /* Phím tắt: ← → chuyển thẻ, Home về thẻ đầu, Space lật thẻ */
   useEffect(() => {
@@ -872,6 +909,7 @@ function ReadingVocabulary({ blogId, guest }) {
   return (
     <main className="mx-auto max-w-4xl px-4 pb-16 pt-6 sm:px-6 lg:py-8">
       <style>{KEYFRAMES}</style>
+      <FavoriteToast notification={favoriteToast} />
       <Link className={`inline-flex items-center gap-2 rounded-md text-sm font-bold text-ice-navy transition hover:text-ice-gold-700 ${focusRing}`} to={`/doc-hieu/${encodeURIComponent(blogId)}`}>
         <Icon className="h-4 w-4" name="back" />
         Quay lại bài đọc
@@ -926,15 +964,33 @@ function ReadingVocabulary({ blogId, guest }) {
             </div>
           </div>
 
-          <footer className="mt-6 flex items-center justify-between gap-3">
+          <footer className="mt-6 flex flex-wrap items-center justify-between gap-3">
             <button className={btnOutline} disabled={current === 0} onClick={() => move(current - 1)} type="button">
               <Icon className="h-4 w-4" name="prev" />Trước
             </button>
             <p className="hidden text-center text-xs text-slate-400 md:block">Phím tắt: ← → chuyển thẻ, Space lật thẻ, Home về thẻ đầu</p>
-            {current >= total - 1 ? (
-              <button className={btnGold} onClick={resetDeck} type="button"><Icon className="h-4 w-4" name="reset" />Học lại từ đầu</button>
-            ) : (
-              <button className={btnPrimary} onClick={() => move(current + 1)} type="button">Tiếp theo<Icon className="h-4 w-4" name="next" /></button>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                aria-label="Thêm vào yêu thích"
+                className={`${btnGold} px-3 text-xs sm:px-5 sm:text-sm`}
+                disabled={favoriteSaving}
+                onClick={() => addWordToFavorites(word)}
+                title="Thêm vào yêu thích"
+                type="button"
+              >
+                <Icon className="h-4 w-4" name="heart" />
+                {favoriteSaving ? 'Đang thêm...' : 'Thêm vào yêu thích'}
+              </button>
+              {current >= total - 1 ? (
+                <button className={`${btnGold} px-3 text-xs sm:px-5 sm:text-sm`} onClick={resetDeck} type="button"><Icon className="h-4 w-4" name="reset" />Học lại từ đầu</button>
+              ) : (
+                <button className={`${btnPrimary} px-3 text-xs sm:px-5 sm:text-sm`} onClick={() => move(current + 1)} type="button">Tiếp theo<Icon className="h-4 w-4" name="next" /></button>
+              )}
+            </div>
+            {favoriteError && (
+              <p className="basis-full text-right text-sm font-semibold text-red-700" role="alert">
+                {favoriteError}
+              </p>
             )}
           </footer>
 

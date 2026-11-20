@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, test } from 'node:test'
-import { scrollCurrentPageLinkToTop } from './navigationScroll.js'
+import { scrollCurrentPageLinkToTop, scrollExamQuestionIntoView } from './navigationScroll.js'
 
 const originalWindow = globalThis.window
 
@@ -45,4 +45,19 @@ test('section links, external links and modified clicks do not reset the page', 
   link.origin = 'https://example.test'
   scrollCurrentPageLinkToTop({ ...event, ctrlKey: true })
   assert.equal(calls, 0)
+})
+
+test('question navigation scrolls only its question panel', () => {
+  let position
+  const container = {
+    scrollTop: 200,
+    clientTop: 2,
+    getBoundingClientRect: () => ({ top: 100 }),
+    scrollTo: (options) => { position = options },
+  }
+  const question = { parentElement: container, getBoundingClientRect: () => ({ top: 350 }) }
+  globalThis.window = { scrollTo: () => { throw new Error('Must not scroll the page') } }
+  scrollExamQuestionIntoView(question)
+  assert.deepEqual(position, { top: 448, behavior: 'smooth' })
+  scrollExamQuestionIntoView(null)
 })

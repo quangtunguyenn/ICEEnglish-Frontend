@@ -9,7 +9,7 @@ export function ExamSearchForm({ keywordInput, onKeywordChange, student = false 
       )}
       <input
         aria-label="Tìm theo tên đề"
-        className={`w-full font-questrial text-lg rounded-full border-2 border-slate-200 bg-white px-6 py-2.5 pr-12 text-slate-800 shadow-sm transition-all duration-300 placeholder:text-slate-400 hover:border-ice-gold hover:shadow-md focus:border-ice-gold focus:bg-white focus:outline-none focus:ring-4 focus:ring-ice-gold/20 ${student ? "pl-12" : ""}`}
+        className={`w-full text-[16px] rounded-full border-2 border-slate-200 bg-white px-6 py-2.5 pr-12 text-slate-800 shadow-sm transition-all duration-300 placeholder:text-slate-400 hover:border-ice-gold hover:shadow-md focus:border-ice-gold focus:bg-white focus:outline-none focus:ring-4 focus:ring-ice-gold/20 ${student ? "pl-12" : ""}`}
         onChange={(event) => onKeywordChange(event.target.value)}
         placeholder="Tìm theo tên đề..."
         type="search"

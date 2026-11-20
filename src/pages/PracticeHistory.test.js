@@ -62,7 +62,7 @@ test('empty history is distinct from invalid responses and server errors', async
   response = { body: { data: { examId: 'exam-1', items: [], page: 0, totalPages: 0, totalElements: 0 } } }
   assert.equal((await api.getPracticeHistory('exam-1')).totalElements, 0)
   response = { body: { data: { examId: 'exam-1', items: [], page: 1, totalPages: 2, totalElements: 22 } } }
-  await assert.rejects(api.getPracticeHistory('exam-1'), /không hợp lệ/)
+  await assert.rejects(api.getPracticeHistory('exam-1'), /Không thể hiển thị lịch sử/)
   response = { body: { data: { examId: 'exam-1', items: [{ submissionId: 's', submittedAt: 'invalid' }], page: 0, totalPages: 1, totalElements: 1 } } }
   await assert.rejects(api.getPracticeHistory('exam-1'), /Thời gian nộp bài không hợp lệ/)
   response = { status: 500, body: { message: 'Không thể tải lịch sử' } }
@@ -81,7 +81,7 @@ test('review loads the specified submission and rejects a different result', asy
   assert.deepEqual(await api.getPracticeSubmissionReview('sub-1'), result)
   assert.equal(requests[0], '/api/v1/submissions/practice/sub-1/review')
   response = { body: { data: { ...result, submissionId: 'sub-2' } } }
-  await assert.rejects(api.getPracticeSubmissionReview('sub-1'), /không hợp lệ/)
+  await assert.rejects(api.getPracticeSubmissionReview('sub-1'), /Không thể hiển thị chi tiết/)
   response = { status: 403, body: { message: 'Không có quyền' } }
   await assert.rejects(api.getPracticeSubmissionReview('sub-1'), (error) => error.response.status === 403)
 })

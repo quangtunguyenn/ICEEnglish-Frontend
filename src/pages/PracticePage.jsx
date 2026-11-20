@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ExamPager, ExamSearchForm } from "../components/ExamListControls";
 import { BrandPageIntro } from "../components/PageIntro";
+import { GuestExamBadge, guestRowClass, isExamLockedForGuest, LockedExamButton } from "../components/LockedExamButton";
 import { useGuestMode } from "../hooks/useGuestMode";
 import { PAGE_SIZE, useExamPagination } from "../hooks/useExamPagination";
+import { getScoreTone } from "../utils/scoreTone";
 
 const SKELETON_COUNT = 7;
 const PREVIEW_DELAY_MS = 70;
@@ -56,36 +58,6 @@ function formatScore(value) {
   return value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
 }
 
-// Màu không phải là kênh duy nhất: luôn đi kèm nhãn chữ.
-function getScoreTone(value) {
-  if (value >= 8)
-    return {
-      label: "Rất tốt",
-      stroke: "stroke-emerald-700",
-      strokeDark: "stroke-emerald-300",
-      text: "text-emerald-700",
-      textDark: "text-emerald-300",
-      fill: "bg-emerald-300",
-    };
-  if (value >= 5)
-    return {
-      label: "Đạt",
-      stroke: "stroke-amber-700",
-      strokeDark: "stroke-amber-300",
-      text: "text-amber-700",
-      textDark: "text-amber-300",
-      fill: "bg-amber-300",
-    };
-  return {
-    label: "Cần ôn thêm",
-    stroke: "stroke-rose-700",
-    strokeDark: "stroke-rose-300",
-    text: "text-rose-700",
-    textDark: "text-rose-300",
-    fill: "bg-rose-300",
-  };
-}
-
 // Mốc kế tiếp tính trực tiếp từ điểm gần nhất, không cần thêm dữ liệu từ API.
 function getMilestoneText(value) {
   if (value == null) return "Làm bài để mở khóa kết quả đầu tiên của bạn.";
@@ -124,7 +96,7 @@ function ScoreRing({ value, large = false, onDark = false }) {
   const ratio = attempted ? Math.min(Math.max(value / 10, 0), 1) : 0;
   const display = attempted ? formatScore(value) : "–";
   const sizeClass = large ? "h-28 w-28" : "h-11 w-11";
-  const arc = onDark ? tone?.strokeDark : tone?.stroke;
+  const arc = tone?.stroke;
 
   let numberColor = onDark ? "text-white/75" : "text-slate-500";
   if (attempted) numberColor = onDark ? "text-white" : "text-slate-900";
@@ -244,11 +216,16 @@ const ACTION_STYLES = {
 function ExamActions({ exam, title, attempted, guest, variant }) {
   const style = ACTION_STYLES[variant];
   const examId = encodeURIComponent(exam.id);
+  const locked = isExamLockedForGuest(guest, exam);
 
   return (
     <div className="flex flex-col gap-3">
       <>
         <>
+          {locked ? (
+            <LockedExamButton label="Đăng ký để làm đề" title={title} />
+          ) : (
+          <>
           {/* Chỉ giữ lại duy nhất định nghĩa chuyển động, không viết class CSS ở đây nữa */}
           <style>{`
     @keyframes pen-action {
@@ -310,6 +287,8 @@ function ExamActions({ exam, title, attempted, guest, variant }) {
               </div>
             </div>
           </Link>
+          </>
+          )}
         </>
       </>
 
@@ -463,7 +442,7 @@ function ExamRow({
         className={`relative rounded-2xl border bg-white transition-[border-color,box-shadow] duration-300 ${
           active
             ? "border-ice-gold-300 shadow-[0_12px_30px_-18px_rgba(16,43,92,0.35)]"
-            : "border-slate-200/80 hover:border-ice-gold-300"
+            : `border-slate-200/80 hover:border-ice-gold-300 ${guestRowClass(guest, exam)}`
         }`}
       >
         <button
@@ -516,6 +495,7 @@ function ExamRow({
           </span>
 
           <span className="min-w-0 flex-1">
+            <GuestExamBadge exam={exam} guest={guest} />
             <span className="block break-words font-gf text-xl font-bold leading-snug text-slate-900">
               {title}
             </span>

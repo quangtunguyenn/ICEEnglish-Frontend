@@ -51,6 +51,13 @@ học sinh trong trang quản trị. Vô hiệu hóa là xóa mềm; JWT chưa h
 hoạt động lại khi tài khoản được kích hoạt. Backend cần áp dụng migration
 `V11__Add_user_active_status.sql` trước khi sử dụng.
 
+## Xóa đề nháp và video
+
+ADMIN và TEACHER có thể xóa tất cả đề DRAFT trong trang quản trị; số đề đã xóa
+được hiển thị sau khi xác nhận. Chỉ ADMIN có thể xóa video cùng dữ liệu liên
+quan. Cả hai thao tác đều xóa vĩnh viễn và cần xác nhận; xóa video không xóa
+file media hoặc tài liệu lưu ở dịch vụ bên ngoài.
+
 ## Lưu bài thi thử trên trình duyệt
 
 Khi chọn **Vào phòng thi**, học sinh thực hành đăng nhập trên giao diện mô

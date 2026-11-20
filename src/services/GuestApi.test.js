@@ -99,7 +99,7 @@ test('guest content requests omit student authorization', async () => {
     assert.equal(requests[1].authorization, 'Bearer staff-token')
     assert.deepEqual(JSON.parse(requests[1].body), { status: 'NOT_DONE' })
     responseBody = { message: 'invalid' }
-    await assert.rejects(api.getConsultationRequests(), /không hợp lệ/)
+    await assert.rejects(api.getConsultationRequests(), /Không thể hiển thị danh sách tư vấn/)
     responseStatus = 403
     await assert.rejects(api.updateConsultationStatus('request-1', 'DONE'), (error) => error.response.status === 403)
     responseStatus = 200
@@ -116,6 +116,40 @@ test('guest attempt requests use the private session header without student auth
   assert.equal(requests[0].url, '/api/v1/guest/exams/exam-1/start')
   assert.equal(requests[0].guestAttempt, 'attempt-1')
   assert.equal(requests[0].authorization, undefined)
+})
+
+test('part log requests use the correct attempt credentials and reject malformed responses', async () => {
+  storage.set('accessToken', 'student-token')
+  requests.length = 0
+  responseStatus = 200
+  responseBody = [{ partId: 'p1', displayIndex: 1, timeSpentSeconds: 0, recommendedTimeSeconds: null }]
+  assert.deepEqual(await api.getSubmissionPartLogs('submission/1'), responseBody)
+  assert.equal(requests[0].url, '/api/v1/submissions/submission%2F1/part-logs')
+  assert.equal(requests[0].authorization, 'Bearer student-token')
+  assert.deepEqual(await api.getGuestExamPartLogs('exam/1', 'attempt-1'), responseBody)
+  assert.equal(requests[1].url, '/api/v1/guest/exams/exam%2F1/part-logs')
+  assert.equal(requests[1].guestAttempt, 'attempt-1')
+  assert.equal(requests[1].authorization, undefined)
+  responseBody = { message: 'unexpected response' }
+  await assert.rejects(api.getSubmissionPartLogs('submission-1'), /dữ liệu không hợp lệ/)
+  await assert.rejects(api.getGuestExamPartLogs('exam-1', 'attempt-1'), /dữ liệu không hợp lệ/)
+})
+
+test('active-part requests send no elapsed time and use the correct credentials', async () => {
+  storage.set('accessToken', 'student-token')
+  requests.length = 0
+  responseStatus = 200
+  responseBody = {}
+  await api.setActivePart('submission/1', 'part/1')
+  await api.setGuestExamActivePart('exam/1', 'part/1', 'attempt-1')
+  assert.equal(requests[0].method, 'PUT')
+  assert.equal(requests[0].url, '/api/v1/submissions/submission%2F1/parts/part%2F1/time')
+  assert.equal(requests[0].authorization, 'Bearer student-token')
+  assert.equal(requests[0].body, '')
+  assert.equal(requests[1].url, '/api/v1/guest/exams/exam%2F1/parts/part%2F1/time')
+  assert.equal(requests[1].guestAttempt, 'attempt-1')
+  assert.equal(requests[1].authorization, undefined)
+  assert.equal(requests[1].body, '')
 })
 
 test('guest homework submissions send only answers and the attempt header', async () => {

@@ -1,4 +1,4 @@
-import axios from 'axios'
+﻿import axios from 'axios'
 import { formatPracticeSubmissionDate } from '../utils/practiceHistory'
 
 const api = axios.create({
@@ -82,7 +82,7 @@ export async function loginStudent(credentials) {
   const accessToken = findAccessToken(result)
 
   if (!accessToken) {
-    throw new Error('Backend đăng nhập thành công nhưng không trả về access token.')
+    throw new Error('Không thể hoàn tất đăng nhập lúc này. Vui lòng thử lại.')
   }
 
   localStorage.removeItem('currentUser')
@@ -120,7 +120,7 @@ export async function getAdminStudents(params = {}) {
   if (!Array.isArray(data) || data.some((student) =>
     !student || typeof student.id !== 'string' || typeof student.username !== 'string' ||
     typeof student.isActive !== 'boolean',
-  )) throw new Error('Dữ liệu danh sách học sinh không hợp lệ.')
+  )) throw new Error('Không thể hiển thị danh sách học sinh lúc này. Vui lòng tải lại trang.')
   return data
 }
 
@@ -145,7 +145,7 @@ export async function getConsultationRequests(params = {}) {
     !Number.isInteger(row.bod) || typeof row.targetGrade !== 'number' ||
     typeof row.phoneNumberRequest !== 'string' || typeof row.dateRequest !== 'string' ||
     !['NOT_DONE', 'DONE'].includes(row.status),
-  )) throw new Error('Dữ liệu danh sách tư vấn không hợp lệ.')
+  )) throw new Error('Không thể hiển thị danh sách tư vấn lúc này. Vui lòng tải lại trang.')
   return data
 }
 
@@ -176,6 +176,14 @@ export async function importExam(file, examType) {
 export async function getAdminExams(mode) {
   const { data } = await api.get('/api/v1/exams', { params: mode ? { mode } : {} })
   return extractExamList(data)
+}
+
+export async function deleteDraftExams() {
+  const { data } = await api.delete('/api/v1/exams/drafts')
+  if (!Number.isSafeInteger(data?.deletedCount) || data.deletedCount < 0) {
+    throw new Error('Không thể xác nhận số đề nháp đã xóa. Vui lòng tải lại danh sách.')
+  }
+  return data.deletedCount
 }
 
 export async function getMockExamList({ page = 0, size = 20, keyword = '' } = {}) {
@@ -209,6 +217,22 @@ export async function publishExam(examId) {
   await api.patch(`/api/v1/exams/${examId}/publish`)
 }
 
+export async function setVideoPosition(videoId, position) {
+  await api.put(`/api/v1/admin/videos/${encodeURIComponent(videoId)}/position`, { position: position || null })
+}
+
+export async function deleteAdminVideo(videoId) {
+  await api.delete(`/api/v1/admin/videos/${encodeURIComponent(videoId)}`)
+}
+
+export async function setVideoGuestAccess(videoId, guestAccessible) {
+  await api.put(`/api/v1/admin/videos/${encodeURIComponent(videoId)}/guest-access`, { guestAccessible })
+}
+
+export async function setExamGuestAccess(examId, guestAccessible) {
+  await api.put(`/api/v1/admin/exams/${encodeURIComponent(examId)}/guest-access`, { guestAccessible })
+}
+
 export async function archiveExam(examId) {
   await api.patch(`/api/v1/exams/${examId}/archive`)
 }
@@ -218,9 +242,37 @@ export async function toggleExamAnswersRevealed(examId) {
   return data?.data || data?.result || data
 }
 
+const TECHNICAL_MESSAGE = /exception|stack ?trace|\bsql\b|constraint|nullpointer|\bnull\b|undefined|status code|network error|timeout|<\/?\w+>|\bat [\w$.]+\(|org\.|java\.|jdbc|hibernate|\bjwt\b|\buuid\b|\bjson\b|endpoint|\bapi\b|backend|[{}[\]]/i
+
+const VIETNAMESE_CHARS = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i
+
+function isUserFriendlyMessage(message) {
+  return typeof message === 'string' && message.trim().length > 0 && message.length <= 300 &&
+    VIETNAMESE_CHARS.test(message) && !TECHNICAL_MESSAGE.test(message)
+}
+
 export function getApiErrorMessage(error, fallback = 'Đã xảy ra lỗi. Vui lòng thử lại.') {
-  if (!axios.isAxiosError(error)) return error.message || fallback
-  return error.response?.data?.message || error.response?.data?.error || fallback
+  if (!axios.isAxiosError(error)) {
+    // Lỗi lập trình của trình duyệt (TypeError...) không có ý nghĩa với người dùng.
+    if (error instanceof TypeError || error instanceof ReferenceError || error instanceof RangeError || error instanceof SyntaxError) return fallback
+    return isUserFriendlyMessage(error?.message) ? error.message : fallback
+  }
+
+  const status = error.response?.status
+  if (!error.response) {
+    return error.code === 'ECONNABORTED'
+      ? 'Kết nối đang chậm hơn bình thường. Vui lòng thử lại sau ít phút.'
+      : 'Không thể kết nối tới hệ thống. Vui lòng kiểm tra mạng và thử lại.'
+  }
+  if (status >= 500) return 'Hệ thống đang bận hoặc đang được bảo trì. Vui lòng thử lại sau ít phút.'
+  if (status === 429) return 'Bạn thao tác hơi nhanh. Vui lòng đợi một chút rồi thử lại.'
+
+  const serverMessage = error.response.data?.message || error.response.data?.error
+  if (isUserFriendlyMessage(serverMessage)) return serverMessage
+  if (status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+  if (status === 403) return 'Bạn chưa có quyền thực hiện thao tác này.'
+  if (status === 404) return 'Không tìm thấy nội dung bạn cần. Nội dung có thể đã được thay đổi hoặc gỡ bỏ.'
+  return fallback
 }
 
 function extractExamList(data) {
@@ -372,8 +424,8 @@ export async function getGuestExam(examId, submissionId) {
 export async function setGuestExamActivePart(examId, partId, submissionId) {
   await api.put(
     `/api/v1/guest/exams/${encodeURIComponent(examId)}/parts/${encodeURIComponent(partId)}/time`,
-    null,
-    guestAttemptConfig(submissionId),
+    undefined,
+    { ...guestAttemptConfig(submissionId), timeout: 10000 },
   )
 }
 
@@ -382,7 +434,7 @@ export async function getGuestExamPartLogs(examId, submissionId) {
     `/api/v1/guest/exams/${encodeURIComponent(examId)}/part-logs`,
     guestAttemptConfig(submissionId),
   )
-  return unwrapApiData(data)
+  return normalizePartTimeLogs(data)
 }
 
 export async function submitGuestExam(examId, submissionId, payload) {
@@ -425,7 +477,7 @@ export async function startExam(examId) {
 }
 
 export async function setActivePart(submissionId, partId) {
-  await api.put(`/api/v1/submissions/${submissionId}/parts/${partId}/time`)
+  await api.put(`/api/v1/submissions/${encodeURIComponent(submissionId)}/parts/${encodeURIComponent(partId)}/time`, undefined, { timeout: 10000 })
 }
 
 export async function startVideoHomework(videoId) {
@@ -465,7 +517,7 @@ export async function getPracticeHistory(examId, page = 0, size = 20) {
     !Number.isInteger(result.totalElements) || result.totalElements < 0 ||
     result.items.some((item) => !item?.submissionId || !item.submittedAt)
   ) {
-    throw new Error('Dữ liệu lịch sử bài làm không hợp lệ.')
+    throw new Error('Không thể hiển thị lịch sử bài làm lúc này. Vui lòng tải lại trang.')
   }
   result.items.forEach((item) => formatPracticeSubmissionDate(item.submittedAt))
   return result
@@ -478,7 +530,7 @@ export async function getPracticeSubmissionReview(submissionId) {
     !result || String(result.submissionId) !== String(submissionId) ||
     !result.examId || !Array.isArray(result.details)
   ) {
-    throw new Error('Dữ liệu chi tiết bài làm không hợp lệ.')
+    throw new Error('Không thể hiển thị chi tiết bài làm lúc này. Vui lòng tải lại trang.')
   }
   formatPracticeSubmissionDate(result.submittedAt)
   return result
@@ -502,11 +554,17 @@ export async function getMockReview(examId) {
 }
 
 export async function getSubmissionPartLogs(submissionId) {
-  const { data } = await api.get(`/api/v1/submissions/${submissionId}/part-logs`)
-  const result = data?.data || data?.result || data
+  const { data } = await api.get(`/api/v1/submissions/${encodeURIComponent(submissionId)}/part-logs`)
+  return normalizePartTimeLogs(data)
+}
 
-  if (Array.isArray(result)) return result
-  return result?.partTimeLogs || result?.partLogs || result?.content || []
+function normalizePartTimeLogs(data) {
+  const result = unwrapApiData(data)
+  const logs = Array.isArray(result) ? result : result?.partTimeLogs || result?.partLogs || result?.content
+  if (!Array.isArray(logs) || logs.some((part) => !part || typeof part !== 'object' || !part.partId)) {
+    throw new Error('Không thể hiển thị thời gian từng phần do dữ liệu không hợp lệ. Vui lòng thử lại.')
+  }
+  return logs
 }
 
 export async function getVideoTitles() {
@@ -635,4 +693,22 @@ export async function getVideoVocabularies(videoId) {
   const { data } = await api.get(`/api/v1/videos/${videoId}/vocabularies`)
   const result = unwrapApiData(data)
   return Array.isArray(result) ? result : result?.items || result?.content || []
+}
+
+export async function getFavoriteVocabularyDeck() {
+  const { data } = await api.get('/api/v1/vocabularies/favorites')
+  const result = unwrapApiData(data)
+  if (!Array.isArray(result?.favorites) || !Array.isArray(result?.quizOptions)) {
+    throw new Error('Không thể tải flashcard yêu thích lúc này. Vui lòng tải lại trang.')
+  }
+  return result
+}
+
+export async function addFavoriteVocabulary(payload) {
+  const { data } = await api.post('/api/v1/vocabularies/favorites', payload)
+  return unwrapApiData(data)
+}
+
+export async function removeFavoriteVocabulary(favoriteId) {
+  await api.delete(`/api/v1/vocabularies/favorites/${encodeURIComponent(favoriteId)}`)
 }

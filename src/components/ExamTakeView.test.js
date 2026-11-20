@@ -16,13 +16,14 @@ after(async () => {
   await server?.close()
 })
 
-function renderExam(guest, isMock) {
+function renderExam(guest, isMock, submitting = false, overrides = {}) {
   const question = { id: 'q1', orderIndex: 1, content: 'Question', optA: 'Answer' }
   const activePart = { id: 'p1', questions: [question] }
   const noop = () => {}
   return renderToStaticMarkup(createElement(ExamTakeView, {
     guest,
     isMock,
+    submitting,
     isGeneralExam: !isMock,
     exam: { parts: [activePart] },
     activePart,
@@ -46,8 +47,38 @@ function renderExam(guest, isMock) {
     goToQuestion: noop,
     goToNextPart: noop,
     goToPreviousPart: noop,
+    ...overrides,
   }))
 }
+
+test('shows tracking and submission errors for mock exams without treating the countdown as server expiry', () => {
+  const html = renderExam(false, true, false, {
+    trackingError: 'Không thể kết nối.',
+    error: 'Không thể nộp bài.',
+    remainingSeconds: 0,
+  })
+  assert.match(html, /Không thể ghi nhận thời gian phần đang làm/)
+  assert.match(html, /Thử lại/)
+  assert.match(html, /Không thể nộp bài/)
+  assert.match(html, /hệ thống sẽ kiểm tra thời hạn/)
+  assert.doesNotMatch(html, /disabled=""[^>]*>Lưu/)
+  const unavailable = renderExam(false, true, false, { timerUnavailable: true, remainingSeconds: 0 })
+  assert.match(unavailable, /Không khả dụng/)
+  assert.doesNotMatch(unavailable, /Đồng hồ tham khảo đã về 0/)
+})
+
+test('shows the server start date in Vietnam time', () => {
+  const html = renderExam(false, true, false, { examStartedAt: '2026-01-01T18:00:00Z' })
+  assert.match(html, /Ngày thi: 02\/01\/2026/)
+})
+
+test('does not display the fullscreen gate while submission is in progress', () => {
+  const html = renderExam(false, true, true)
+  assert.match(html, /Đang nộp/)
+  assert.doesNotMatch(html, /Bắt đầu toàn màn hình/)
+  assert.match(html, /<label[^>]*cursor-not-allowed[^>]*><input[^>]*disabled=""/)
+  assert.match(renderExam(false, true), /<label[^>]*cursor-pointer[^>]*><input/)
+})
 
 for (const isMock of [false, true]) {
   test(`${isMock ? 'mock' : 'practice'} exam has the same controls and fullscreen gate for guests and students`, () => {

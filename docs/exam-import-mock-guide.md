@@ -49,7 +49,19 @@ Loại đề chọn trên giao diện (`examType`) là loại mà backend dùng;
 | `opt_a` … `opt_d` | có | 4 đáp án |
 | `correct_opt` | có | `A`, `B`, `C` hoặc `D` |
 | `explanation` | không | Lời giải, hỗ trợ `**đậm**`, `*nghiêng*` |
-| `related_video_id` | không | ID video ôn tập hoặc `null` |
+| `related_video_ids` | không | Danh sách ID video ôn tập; có thể bỏ trống hoặc dùng `[]`. Trường `related_video_id` cũ vẫn nhận một ID, `null` hoặc mảng ID |
+
+Ví dụ nhiều video:
+
+```json
+"related_video_ids": ["uuid-video-1", "uuid-video-2"]
+```
+
+Hoặc dùng tên trường cũ với giá trị mảng:
+
+```json
+"related_video_id": ["uuid-video-1", "uuid-video-2"]
+```
 
 ## 3. Quy ước định dạng văn bản
 

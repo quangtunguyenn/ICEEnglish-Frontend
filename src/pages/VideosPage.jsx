@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useConsultationInvite } from '../components/ConsultationInvite'
 import {
   getApiErrorMessage,
   getVideoByTitle,
@@ -56,7 +57,6 @@ function Icon({ name, className = 'h-5 w-5', strokeWidth = 2 }) {
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ice-navy/40 focus-visible:ring-offset-2'
 const btnPrimary = `inline-flex items-center justify-center gap-2 rounded-xl bg-ice-navy px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-ice-navy/90 disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`
 const btnGold = `inline-flex items-center justify-center gap-2 rounded-xl bg-ice-gold px-5 py-3 text-sm font-bold text-ice-navy shadow-sm transition hover:bg-ice-gold-300 ${focusRing}`
-const btnOutline = `inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-ice-navy transition hover:border-ice-navy/40 hover:bg-ice-navy/5 disabled:cursor-wait disabled:opacity-50 ${focusRing}`
 
 function getYoutubeEmbedUrl(videoUrl) {
   const value = String(videoUrl || '').trim()
@@ -114,6 +114,7 @@ const Chip = ({ children, tone = 'slate' }) => (
 )
 
 export function VideosPage() {
+  const promptConsultation = useConsultationInvite()
   const navigate = useNavigate()
   const location = useLocation()
   const guest = useGuestMode()
@@ -130,6 +131,7 @@ export function VideosPage() {
   const [loadingTitles, setLoadingTitles] = useState(true)
   const [loadedVideoKey, setLoadedVideoKey] = useState('')
   const [error, setError] = useState('')
+  const [unavailableLocation, setUnavailableLocation] = useState(null)
   const [documentUrl, setDocumentUrl] = useState('')
   const [homework, setHomework] = useState(null)
   const [vocabularies, setVocabularies] = useState([])
@@ -154,15 +156,15 @@ export function VideosPage() {
   }, [guest])
 
   const activeVideo = useMemo(
-    () => getSelectedVideo(titles, selectedVideoId, selectedTitle),
-    [selectedTitle, selectedVideoId, titles],
+    () => unavailableLocation === location.key ? null : getSelectedVideo(titles, selectedVideoId, selectedTitle),
+    [location.key, selectedTitle, selectedVideoId, titles, unavailableLocation],
   )
   const activeTitle = getVideoTitle(activeVideo)
   const activeVideoKey = getVideoId(activeVideo) || activeTitle
-  const inaccessibleVideo = guest && activeVideo && activeVideo.accessible !== true
+  const inaccessibleVideo = guest && activeVideo && titles.includes(activeVideo) && activeVideo.accessible !== true
 
   useEffect(() => {
-    if (!activeVideo || inaccessibleVideo) return
+    if (!activeVideo || inaccessibleVideo || (guest && loadingTitles)) return
     let active = true
 
     async function loadVideo() {
@@ -173,9 +175,9 @@ export function VideosPage() {
       if (!videoRecord) throw new Error('Không tìm thấy video đã chọn.')
 
       const videoId = getVideoId(videoRecord)
-      if (!videoId) throw new Error('Video không có videoId hợp lệ.')
+      if (!videoId) throw new Error('Không thể mở bài học này lúc này. Vui lòng thử lại.')
       if (selectedVideoId && String(videoId) !== String(selectedVideoId)) {
-        throw new Error('Video tìm được không khớp với video đã chọn.')
+        throw new Error('Không thể mở bài học đã chọn. Vui lòng chọn lại bài học.')
       }
 
       const content = guest
@@ -199,12 +201,36 @@ export function VideosPage() {
       if (!active) return
       setVideo(null)
       setLoadedVideoKey(activeVideoKey)
-      setError(getApiErrorMessage(requestError, 'Không thể tải nội dung bài học.'))
+      if (requestError.response?.status === 404) {
+        const savedId = sessionStorage.getItem('selected-video-id')
+        const savedTitle = sessionStorage.getItem('selected-video-title')
+        if ((savedId && String(savedId) === String(activeVideoKey)) ||
+            (!savedId && savedTitle && savedTitle === activeTitle)) {
+          sessionStorage.removeItem('selected-video-id')
+          sessionStorage.removeItem('selected-video-title')
+        }
+        setUnavailableLocation(location.key)
+        setTitles((items) => items.filter((item) => {
+          const itemId = getVideoId(item)
+          return itemId ? String(itemId) !== String(activeVideoKey) : getVideoTitle(item) !== activeTitle
+        }))
+        setDocumentUrl('')
+        setHomework(null)
+        setVocabularies([])
+        setError('Bài giảng này hiện không còn khả dụng. Vui lòng chọn bài giảng khác nếu có.')
+        return
+      }
+      if (guest && requestError.response?.status === 403) promptConsultation(activeTitle)
+      const status = requestError.response?.status
+      if (status === 401) setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+      else if (status === 403) setError('Bạn không có quyền xem bài giảng này.')
+      else if (status >= 400 && status < 500) setError('Không thể tải bài giảng này. Vui lòng chọn bài giảng khác hoặc thử lại sau.')
+      else setError(getApiErrorMessage(requestError, 'Không thể tải nội dung bài học.'))
     })
     return () => {
       active = false
     }
-  }, [activeVideo, activeVideoKey, activeTitle, selectedVideoId, guest, inaccessibleVideo])
+  }, [activeVideo, activeVideoKey, activeTitle, selectedVideoId, guest, inaccessibleVideo, loadingTitles, location.key, promptConsultation])
 
   const displayedVideo = inaccessibleVideo ? null : video
   const currentVideoId = getVideoId(displayedVideo)
@@ -233,7 +259,7 @@ export function VideosPage() {
     getVideoHomeworkAnswers(homeworkExamId)
       .then((response) => {
         const answerUrl = getVideoHomeworkAnswerUrl(response)
-        if (!answerUrl) throw new Error('API không trả về answer_url.')
+        if (!answerUrl) throw new Error('Bài tập này chưa có file đáp án chi tiết.')
         const completionKey = `video-homework-completed:${currentVideoId}:${homeworkExamId}`
         sessionStorage.setItem(completionKey, answerUrl)
         if (active) setFetchedAnswer({ key: completionKey, url: answerUrl, error: '' })
@@ -321,9 +347,7 @@ export function VideosPage() {
     const title = getVideoTitle(item)
     const videoId = getVideoId(item)
     if (guest && item.accessible !== true) {
-      navigate('/dang-nhap', {
-        state: { from: { pathname: '/video', search: videoId ? `?videoId=${encodeURIComponent(videoId)}` : '' } },
-      })
+      promptConsultation(title)
       return
     }
     sessionStorage.setItem('selected-video-title', title)
@@ -372,14 +396,18 @@ export function VideosPage() {
   }
 
   async function reviewLatestHomework() {
-    if (guest || !homeworkExamId || reviewingHomework) return
+    if (!homeworkExamId || reviewingHomework) return
+    if (guest) {
+      promptConsultation(videoTitle)
+      return
+    }
 
     setReviewingHomework(true)
     setHomeworkReviewError('')
     try {
       const review = prefetchedReview || (await getLatestHomeworkReview(homeworkExamId))
       const submissionId = review?.submissionId || review?.submission_id
-      if (!submissionId) throw new Error('API review không trả về submissionId.')
+      if (!submissionId) throw new Error('Không tìm thấy bài làm gần nhất của bạn.')
 
       const reviewResult = {
         ...review,
@@ -435,16 +463,6 @@ export function VideosPage() {
                 </div>
               )}
             </div>
-            <button
-              aria-controls="lesson-sidebar"
-              aria-expanded={sidebarOpen}
-              className={`hidden shrink-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-ice-navy shadow-sm transition hover:border-ice-navy/30 hover:bg-ice-navy/5 lg:inline-flex ${focusRing}`}
-              onClick={toggleSidebar}
-              type="button"
-            >
-              <Icon name="list" />
-              <span>{sidebarOpen ? 'Ẩn danh sách' : 'Danh sách bài'}</span>
-            </button>
           </header>
 
           {loadingVideo && (
@@ -547,29 +565,50 @@ export function VideosPage() {
     </button>
 
     {/* Nút 2: Xem lại bài tập (Glassmorphism tinh tế) */}
-    {hasDoneHomework && (
+    <button
+      className="group inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/60 px-6 py-3.5 text-[15px] font-bold text-slate-700 shadow-sm backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-70"
+      disabled={reviewingHomework}
+      onClick={reviewLatestHomework}
+      type="button"
+    >
+      {reviewingHomework ? (
+        <>
+          <svg className="h-4 w-4 animate-spin text-slate-500" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Đang tải bài làm...</span>
+        </>
+      ) : (
+        <>
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Xem lại bài gần nhất</span>
+        </>
+      )}
+    </button>
+
+    {homeworkAnswerUrl ? (
+      <a
+        className="group inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-3.5 text-[14px] font-bold tracking-wide text-white transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-[0_8px_20px_-6px_rgba(15,23,42,0.5)] active:translate-y-0 active:scale-[0.98]"
+        href={homeworkAnswerUrl}
+        rel="noreferrer"
+        target="_blank"
+      >
+        <svg className="h-4 w-4 text-emerald-400 transition-transform duration-300 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Xem đáp án chi tiết
+      </a>
+    ) : (
       <button
-        className="group inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/60 px-6 py-3.5 text-[15px] font-bold text-slate-700 shadow-sm backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-70"
-        disabled={reviewingHomework}
-        onClick={reviewLatestHomework}
+        className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-3.5 text-[14px] font-bold tracking-wide text-white opacity-50"
+        disabled
+        title="Đáp án sẽ khả dụng sau khi nộp bài."
         type="button"
       >
-        {reviewingHomework ? (
-          <>
-            <svg className="h-4 w-4 animate-spin text-slate-500" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span>Đang tải bài làm...</span>
-          </>
-        ) : (
-          <>
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Xem lại bài gần nhất</span>
-          </>
-        )}
+        Xem đáp án chi tiết
       </button>
     )}
   </div>
@@ -585,7 +624,7 @@ export function VideosPage() {
   )}
 
   {/* KHU VỰC ĐÁP ÁN CHI TIẾT (Hiển thị tách biệt) */}
-  {completionToken && (
+  {(loadingHomeworkAnswer || homeworkAnswerError) && (
     <div className="mt-2 flex flex-col items-start gap-3 border-t border-slate-100 pt-5">
       {loadingHomeworkAnswer && (
         <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
@@ -596,21 +635,6 @@ export function VideosPage() {
           Đang tải liên kết đáp án...
         </div>
       )}
-      
-      {homeworkAnswerUrl && (
-        <a
-          className="group inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-3 text-[14px] font-bold tracking-wide text-white transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-[0_8px_20px_-6px_rgba(15,23,42,0.5)] active:translate-y-0 active:scale-[0.98]"
-          href={homeworkAnswerUrl}
-          rel="noreferrer"
-          target="_blank"
-        >
-          <svg className="h-4 w-4 text-emerald-400 transition-transform duration-300 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Xem đáp án chi tiết
-        </a>
-      )}
-
       {homeworkAnswerError && (
         <p className="text-sm font-medium text-red-600">
           * {homeworkAnswerError}
@@ -686,7 +710,6 @@ export function VideosPage() {
               ) : (
                 <div className="text-center">
                   <p className="font-semibold text-ice-navy">Chưa chọn bài giảng</p>
-                  <button className={`${btnPrimary} mt-4`} onClick={() => setSidebarOpen(true)} type="button">Mở danh sách bài học</button>
                 </div>
               )}
             </div>
@@ -706,7 +729,7 @@ export function VideosPage() {
         <aside
           aria-hidden={!sidebarOpen}
           aria-label="Nội dung bài học"
-          className={`fixed bottom-0 right-0 top-0 z-[70] flex w-80 max-w-[88vw] flex-col overflow-hidden bg-white shadow-2xl transition-[translate,width,margin,opacity,visibility] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none lg:sticky lg:bottom-auto lg:right-auto lg:top-6 lg:z-auto lg:max-w-none lg:shrink-0 lg:rounded-2xl lg:border lg:border-slate-200 lg:shadow-sm lg:duration-300 ${
+          className={`fixed bottom-0 right-0 top-0 z-[70] flex w-80 max-w-[88vw] flex-col overflow-hidden bg-white shadow-2xl transition-[translate,width,margin,opacity,visibility] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none lg:sticky lg:bottom-auto lg:right-auto lg:top-[calc(var(--sticky-header-offset,0px)+1.5rem)] lg:z-auto lg:max-w-none lg:shrink-0 lg:rounded-2xl lg:border lg:border-slate-200 lg:shadow-sm lg:duration-300 ${
             sidebarOpen ? 'visible translate-x-0 lg:w-80' : 'invisible translate-x-full lg:-ml-6 lg:w-0 lg:translate-x-0 lg:border-transparent lg:opacity-0'
           }`}
           id="lesson-sidebar"
@@ -736,7 +759,7 @@ export function VideosPage() {
             )}
             {!loadingTitles && titles.length === 0 && <p className="p-5 text-sm text-slate-500">Chưa có video nào.</p>}
 
-            <ul className="flex-1 space-y-1.5 overflow-y-auto p-3 lg:max-h-[calc(100vh-11rem)] lg:flex-none">
+            <ul className="flex-1 space-y-1.5 overflow-y-auto p-3 lg:max-h-[max(0px,calc(100vh-var(--sticky-header-offset,0px)-11rem))] lg:flex-none">
               {titles.map((item, index) => {
                 const title = getVideoTitle(item)
                 const videoId = getVideoId(item)
@@ -752,8 +775,8 @@ export function VideosPage() {
                       type="button"
                     >
                       {isActive && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-1 rounded-full bg-ice-gold" />}
-                      <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isActive ? 'bg-ice-navy text-white' : 'bg-slate-100 text-slate-500'}`}>
-                        {index + 1}
+                      <span className={`mt-0.5 flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-bold tabular-nums ${isActive ? 'bg-ice-navy text-white' : 'bg-slate-100 text-slate-500'}`}>
+                        {item.position || index + 1}
                       </span>
                       <span className={`flex-1 text-sm font-semibold ${locked ? 'text-slate-400' : isActive ? 'text-ice-navy' : 'text-slate-700'}`}>{title}</span>
                       {locked && (
@@ -785,8 +808,8 @@ export function VideosPage() {
           <button
             aria-controls="lesson-sidebar"
             aria-expanded="false"
-            className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 inline-flex items-center gap-2 rounded-full bg-ice-navy py-3 pl-4 pr-3 text-sm font-bold text-white shadow-lg ring-2 ring-ice-gold transition hover:bg-ice-navy/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ice-gold-300 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
+            className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 inline-flex items-center gap-2 rounded-full bg-ice-navy py-3 pl-4 pr-3 text-sm font-bold text-white shadow-lg ring-2 ring-ice-gold transition hover:bg-ice-navy/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ice-gold-300"
+            onClick={toggleSidebar}
             type="button"
           >
             <Icon className="h-5 w-5 text-ice-gold" name="list" />

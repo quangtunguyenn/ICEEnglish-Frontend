@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   Link,
   matchPath,
@@ -188,6 +188,9 @@ export function MainLayout() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const [headerVisible, setHeaderVisible] = useState(true);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const headerVisibleRef = useRef(true);
+  const headerRef = useRef(null);
   const menuButtonRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const closeMenuButtonRef = useRef(null);
@@ -204,27 +207,54 @@ export function MainLayout() {
     "/video/:videoId/homework",
   ].some((path) => matchPath(path, location.pathname));
 
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const updateHeight = () => setHeaderHeight(header.getBoundingClientRect().height);
+    updateHeight();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateHeight);
+    observer?.observe(header);
+    window.addEventListener("resize", updateHeight);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, []);
+
   useEffect(() => {
     setMobileMenuOpen(false);
     setOpenMenu(null);
     setAccountMenuOpen(false);
+    headerVisibleRef.current = true;
     setHeaderVisible(true);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
     let previousScrollY = Math.max(0, window.scrollY);
+    let animationFrame = 0;
+    const scrollThreshold = 8;
 
-    function handleScroll() {
-      const scrollY = Math.max(0, window.scrollY);
-      const difference = scrollY - previousScrollY;
+    function updateHeaderVisibility(visible) {
+      if (headerVisibleRef.current === visible) return;
+      headerVisibleRef.current = visible;
+      setHeaderVisible(visible);
 
-      if (scrollY <= 0 || difference < -2) {
-        setHeaderVisible(true);
-      } else if (difference > 2) {
-        setHeaderVisible(false);
+      if (!visible) {
         setMobileMenuOpen(false);
         setOpenMenu(null);
         setAccountMenuOpen(false);
+      }
+    }
+
+    function updateOnScroll() {
+      animationFrame = 0;
+      const scrollY = Math.max(0, window.scrollY);
+      const difference = scrollY - previousScrollY;
+
+      if (scrollY <= 0 || difference < -scrollThreshold) {
+        updateHeaderVisibility(true);
+      } else if (difference > scrollThreshold) {
+        updateHeaderVisibility(false);
       } else {
         return;
       }
@@ -232,9 +262,15 @@ export function MainLayout() {
       previousScrollY = scrollY;
     }
 
+    function handleScroll() {
+      if (!animationFrame) {
+        animationFrame = window.requestAnimationFrame(updateOnScroll);
+      }
+    }
+
     function handlePointerMove(event) {
       if (event.pointerType === "mouse" && event.clientY <= 20) {
-        setHeaderVisible(true);
+        updateHeaderVisibility(true);
       }
     }
 
@@ -243,6 +279,7 @@ export function MainLayout() {
       passive: true,
     });
     return () => {
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("pointermove", handlePointerMove);
     };
@@ -316,18 +353,25 @@ export function MainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 ">
+    <div
+      className="min-h-screen bg-slate-50 "
+      style={{ "--sticky-header-offset": `${headerVisible ? headerHeight : 0}px` }}
+    >
       <header
+        ref={headerRef}
         onClickCapture={scrollCurrentPageLinkToTop}
-        className={`sticky border-b border-[#102b5c]/10 bg-white/95 shadow-[0_8px_28px_-22px_rgba(16,43,92,0.3)] transition-[top,translate,opacity] duration-300 ease-in-out motion-reduce:transition-none lg:backdrop-blur-xl ${
+        className={`sticky top-0  bg-white/95 shadow-[0_8px_28px_-22px_rgba(16,43,92,0.3)] transition-[translate,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:backdrop-blur-xl ${
           mobileMenuOpen
-            ? "top-0 z-[80] opacity-100"
+            ? "z-[80] translate-none opacity-100"
             : headerVisible
-              ? "top-0 z-50 opacity-100 lg:translate-y-0"
-              : "pointer-events-none -top-24 z-50 opacity-0 lg:top-0 lg:-translate-y-full"
+              ? "z-50 translate-none opacity-100"
+              : "pointer-events-none z-50 -translate-y-full opacity-0"
         }`}
         hidden={isMockEntrance || (isImmersivePage && isFullscreen)}
-        onFocusCapture={() => setHeaderVisible(true)}
+        onFocusCapture={() => {
+          headerVisibleRef.current = true;
+          setHeaderVisible(true);
+        }}
       >
         <div className="mx-auto max-w-[1400px] px-4 pt-2 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center lg:gap-x-2 lg:px-0 xl:gap-x-4">
           <div className="flex min-w-0 items-center justify-between gap-3 py-1 lg:col-start-1 lg:row-start-1">
@@ -398,10 +442,10 @@ export function MainLayout() {
           <div
             aria-label={mobileMenuOpen ? "Menu điều hướng" : undefined}
             aria-modal={mobileMenuOpen ? "true" : undefined}
-            className={`fixed inset-y-0 right-0 z-[90] flex w-[min(22rem,90vw)] min-w-0 flex-col overflow-hidden bg-white shadow-2xl transition-[translate,visibility] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none lg:static lg:z-auto lg:contents lg:w-auto lg:overflow-visible lg:bg-transparent lg:shadow-none lg:transition-none ${
+            className={`fixed inset-y-0 right-0 z-[90] flex w-[min(22rem,90vw)] min-w-0 flex-col overflow-hidden bg-white shadow-2xl transition-[clip-path,visibility] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none lg:static lg:z-auto lg:contents lg:w-auto lg:overflow-visible lg:bg-transparent lg:shadow-none lg:transition-none lg:[clip-path:none] ${
               mobileMenuOpen
-                ? "visible translate-x-0"
-                : "invisible translate-x-full lg:visible lg:translate-x-0"
+                ? "visible [clip-path:inset(0)]"
+                : "invisible [clip-path:inset(0_0_0_100%)] lg:visible"
             }`}
             id="main-navigation"
             ref={mobileMenuRef}
@@ -463,7 +507,7 @@ export function MainLayout() {
                         {/* Chevron submenu nằm bên phải tên danh mục, dùng chung cho mobile và desktop. */}
                         <svg
                           aria-hidden="true"
-                          className={`h-5 w-5 transition-transform duration-200 lg:group-hover:rotate-180 ${
+                          className={`h-4 w-4 transition-transform duration-200 lg:group-hover:rotate-180 ${
                             openMenu === item.label ? "rotate-180" : ""
                           }`}
                           fill="none"

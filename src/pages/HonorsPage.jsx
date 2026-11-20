@@ -3,49 +3,77 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useMarketingMotion } from "../hooks/useMarketingMotion";
 import "./HonorsPage.css";
 
+
 const students = [
   {
     name: "Lê Duy Mạnh Phước",
     before: "6.8",
     after: "8.75",
     image: "/Lê Duy Mạnh Phước.jpg",
-    feedback: "em thấy học ở chỗ anh hơn những chỗ em từng học là được hệ thống các kiến thức rất chắc ,được bắt đầu ôn từ những kiến thức không quá xa lạ và từ từ tăng dần các level lên. Và em còn được anh chỉ rõ bản chất của những câu hỏi và những mẹo làm siêu nhanh mà chính xác. Và thay vì học một buổi cho xong một ngày mà anh còn tận tâm ghi lại những buổi video để có thể về nhà xem lại và ôn nếu có quên, những đề tài liệu mà anh đưa cho nó còn thực chiến trong THPT để mọi người làm quen dần. Nói chung em nghĩ nếu muốn ôn THPTQG và ở trên trường thì em thấy học anh vẫn rất ok",
+    feedback: "Điều em thấy khác biệt khi học tại ICE English là kiến thức được hệ thống rất chắc chắn và bài bản. Anh bắt đầu từ những kiến thức nền tảng, sau đó nâng dần độ khó để tụi em có thể tiếp thu một cách dễ dàng. Em còn được hướng dẫn hiểu rõ bản chất của từng dạng câu hỏi cũng như những mẹo làm bài nhanh và chính xác. Không chỉ dừng lại ở những buổi học trên lớp, anh còn ghi lại video bài giảng để tụi em có thể xem lại và ôn tập tại nhà. Tài liệu học tập cũng rất thực tế, bám sát cấu trúc đề thi THPT Quốc gia. Em nghĩ ICE English là một lựa chọn rất tốt cho những bạn muốn cải thiện điểm số và chuẩn bị thật tốt cho kỳ thi THPT Quốc gia ạ!",
   },
   {
     name: "Nguyễn Phương Trang",
     before: "7.3",
     after: "8.75",
     image: "/Nguyễn Phương Trang.jpg",
-    feedback: "Sau khi em học và ôn tập theo khoá học của anh thì điểm môn tiếng anh của em cải thiện nhiều lắm ạ",
+    feedback: "Sau khi tham gia khóa học tại ICE English và kiên trì ôn tập theo lộ trình của anh, điểm môn Tiếng Anh của em đã được cải thiện đáng kể. Em cảm thấy tự tin hơn rất nhiều khi làm bài và vận dụng kiến thức ạ!",
   },
-  { name: "Nguyễn Thanh Xuân", before: "8", after: "8.5", image: "/Nguyễn Thanh Xuân.jpg" },
-  { name: "Nguyễn Thiên Quỳnh Anh", before: "7.3", after: "8", image: "/Nguyễn Thiên Quỳnh Anh.jpg" },
-  { name: "Huỳnh Nguyễn Quỳnh Anh", before: "9.4", after: "9.5" },
-  { name: "Nguyễn Như Hà Anh", after: "8.5" },
-  { name: "Lê Hà Khánh Ly", after: "8", image: "/Lê Hà Khánh Ly.jpg" },
+  {
+    name: "Nguyễn Thanh Xuân",
+    before: "8",
+    after: "8.5",
+    image: "/Nguyễn Thanh Xuân.jpg",
+  },
+  {
+    name: "Nguyễn Thiên Quỳnh Anh",
+    before: "7.3",
+    after: "8",
+    image: "/Nguyễn Thiên Quỳnh Anh.jpg",
+  },
+  {
+    name: "Huỳnh Nguyễn Quỳnh Anh",
+    before: "9.4",
+    after: "9.5",
+  },
+  {
+    name: "Nguyễn Như Hà Anh",
+    after: "8.5",
+  },
+  {
+    name: "Lê Hà Khánh Ly",
+    after: "8",
+    image: "/Lê Hà Khánh Ly.jpg",
+  },
   {
     name: "Nguyễn Viết Trung Nguyên",
     before: "6.5",
     after: "9",
     image: "/Nguyễn Viết Trung Nguyên.jpg",
-    feedback: "với em thấy học bên anh khá ổn, những buổi đầu có lấy lại căn bản, kiến thức, lấy lại gốc. Trong suốt các buổi học sau cũng có gợi lại những bài học căn bản trong suốt quá trình học và ôn tập ạ, em thấy hợp với những bạn có kiến thức nền yếu hoặc mất gốc ạ",
+    feedback: "Em thấy phương pháp học tại ICE English khá hiệu quả, đặc biệt là những buổi học đầu tiên giúp em củng cố lại kiến thức căn bản và lấy lại nền tảng Tiếng Anh. Trong suốt quá trình học, anh cũng thường xuyên lồng ghép và nhắc lại những kiến thức cũ để tụi em không bị quên và có thể vận dụng tốt hơn khi làm bài. Em nghĩ khóa học rất phù hợp với những bạn có nền tảng kiến thức chưa vững hoặc đang muốn lấy lại gốc Tiếng Anh ạ!",
   },
   {
     name: "Nguyễn Kim Bảo Ngọc",
     before: "8.25",
     after: "8.75",
     image: "/Nguyễn Kim Bảo Ngọc.jpg",
-    feedback: "Theo cá nhân em khóa học này khá hiệu quả, tài liệu được cung cấp với nội dung khóa học rất bài bản, chi tiết và sát với thực tế  . Kèm theo đó là giảng viên dạy dễ hiểu, luôn sẵn sàng giải đáp các thắc mắc và truyền cảm hứng học tập rất nhiều đến với học sinh!",
+    feedback: "Theo cá nhân em, khóa học tại ICE English rất hiệu quả. Tài liệu được cung cấp đầy đủ, nội dung bài học được xây dựng bài bản, chi tiết và bám sát thực tế. Bên cạnh đó, anh giảng dạy rất dễ hiểu, luôn sẵn sàng giải đáp những thắc mắc và truyền cho tụi em rất nhiều động lực trong quá trình học tập. Em cảm thấy mình không chỉ cải thiện được kiến thức mà còn có thêm sự tự tin khi học môn Tiếng Anh ạ!",
   },
-  { name: "Nguyễn Bảo Nhi", before: "7.8", after: "8.75", image: "/Nguyễn Bảo Nhi.jpg" },
+  {
+    name: "Nguyễn Bảo Nhi",
+    before: "7.8",
+    after: "8.75",
+    image: "/Nguyễn Bảo Nhi.jpg",
+  },
   {
     name: "Tô Hoàng Ngọc Trâm",
     before: "4.6",
     after: "7",
     image: "/Tô Hoàng Ngọc Trâm.jpg",
-    feedback: "Dạ trước khi học em được 4,6 điểm môn anh, sau học em lên 7 điểm. Anh dạy dễ hiểu, có tâm, chữa bài chi tiết nên em cải thiện nhiều lắm ạ",
+    feedback: "Dạ, trước khi học tại ICE English, em chỉ đạt 4.6 điểm môn Tiếng Anh. Sau một thời gian học và ôn tập, em đã cải thiện lên 7 điểm. Anh dạy rất dễ hiểu, nhiệt tình và có tâm, đặc biệt là phần chữa bài rất chi tiết nên em hiểu rõ lỗi sai của mình và tiến bộ hơn nhiều ạ!",
   },
 ];
+
 
 function StudentCard({ student }) {
   return (

@@ -14,7 +14,11 @@ function foldText(text) {
 
 export function paginateGuestExams(exams, keyword, page, getTitle) {
   const needle = foldText(keyword.trim());
-  const filtered = needle ? exams.filter((exam) => foldText(getTitle(exam)).includes(needle)) : exams;
+  const matched = needle ? exams.filter((exam) => foldText(getTitle(exam)).includes(needle)) : exams;
+  const filtered = [
+    ...matched.filter((exam) => exam.accessible !== false),
+    ...matched.filter((exam) => exam.accessible === false),
+  ];
   return {
     items: filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
     totalElements: filtered.length,
@@ -64,7 +68,7 @@ export function useExamPagination({ guest, mode, getTitle, errorMessage }) {
     loadPage({ page, size: PAGE_SIZE, keyword: debouncedKeyword })
       .then((data) => {
         if (data.items.length > PAGE_SIZE) {
-          throw new Error(`Máy chủ trả về quá ${PAGE_SIZE} đề trên một trang.`);
+          throw new Error(`Hệ thống trả về dữ liệu chưa đúng. Vui lòng tải lại trang.`);
         }
         if (active) setLoaded({ key: requestKey, data, keyword: debouncedKeyword });
       })

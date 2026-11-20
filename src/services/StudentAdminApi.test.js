@@ -65,7 +65,7 @@ test('student list sends encoded filters and accepts nullable fields and empty r
   assert.deepEqual(await api.getAdminStudents(), [])
   assert.equal(requests[1].url, '/api/v1/admin/students')
   body = { items: [] }
-  await assert.rejects(api.getAdminStudents(), /không hợp lệ/)
+  await assert.rejects(api.getAdminStudents(), /Không thể hiển thị danh sách học sinh/)
 })
 
 test('status changes send boolean and require a matching response', async () => {
@@ -119,4 +119,45 @@ test('a late 401 cannot clear a newer login', async () => {
   await assert.rejects(pending)
   assert.equal(storage.get('accessToken'), 'new-token')
   holdResponse = null
+})
+
+test('draft deletion sends an authenticated bodyless DELETE and validates the count', async () => {
+  storage.set('accessToken', 'staff-token')
+  requests.length = 0
+  status = 200
+  for (const deletedCount of [3, 0]) {
+    body = { deletedCount }
+    assert.equal(await api.deleteDraftExams(), deletedCount)
+  }
+  for (const request of requests) {
+    assert.equal(request.method, 'DELETE')
+    assert.equal(request.url, '/api/v1/exams/drafts')
+    assert.equal(request.authorization, 'Bearer staff-token')
+    assert.equal(request.body, '')
+  }
+  for (const invalid of [{}, { deletedCount: -1 }, { deletedCount: '3' }]) {
+    body = invalid
+    await assert.rejects(api.deleteDraftExams(), /Không thể xác nhận số đề nháp/)
+  }
+  status = 403
+  body = {}
+  await assert.rejects(api.deleteDraftExams(), (error) => error.response.status === 403)
+})
+
+test('video deletion encodes the id, accepts 204, and preserves HTTP errors', async () => {
+  requests.length = 0
+  storage.set('accessToken', 'admin-token')
+  status = 204
+  assert.equal(await api.deleteAdminVideo('video / 1'), undefined)
+  assert.deepEqual(requests[0], {
+    method: 'DELETE', url: '/api/v1/admin/videos/video%20%2F%201',
+    authorization: 'Bearer admin-token', body: '',
+  })
+  for (const code of [403, 404, 401]) {
+    status = code
+    body = {}
+    storage.set('accessToken', 'admin-token')
+    await assert.rejects(api.deleteAdminVideo('video-1'), (error) => error.response.status === code)
+    if (code === 401) assert.equal(storage.has('accessToken'), false)
+  }
 })

@@ -9,7 +9,7 @@ export function ResultOverview({ backLabel, backState, backTo, description, eyeb
         state={backState}
         to={backTo}
       >
-        <span aria-hidden="true">←</span> {backLabel}
+        <span aria-hidden="true" className="text-xl leading-none">←</span> {backLabel}
       </Link>
       <BrandPageIntro description={description} eyebrow={eyebrow} logo title={title} />
       <section aria-label="Tổng quan kết quả" className={`grid gap-3 sm:grid-cols-2 ${stats.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>

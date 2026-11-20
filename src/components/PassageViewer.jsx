@@ -1,9 +1,8 @@
 import Highlight from '@tiptap/extension-highlight'
-import Underline from '@tiptap/extension-underline'
 import StarterKit from '@tiptap/starter-kit'
 import { flip, offset, shift, useFloating } from '@floating-ui/react'
 import { EditorContent, useEditor } from '@tiptap/react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { formatInlineText, textToHtml } from '../utils/textFormatting'
 
 export function HighlightableContent({
@@ -19,7 +18,6 @@ export function HighlightableContent({
     extensions: [
       StarterKit.configure({ history: false }),
       Highlight.configure({ multicolor: true }),
-      Underline,
     ],
     content: savedContent || content,
     editable: false,
@@ -34,6 +32,19 @@ export function HighlightableContent({
     middleware: [offset(8), flip(), shift({ padding: 8 })],
   })
   const setFloatingRef = useCallback((node) => refs.setFloating(node), [refs])
+
+  useEffect(() => {
+    if (!contextMenu) return undefined
+
+    function handlePointerDown(event) {
+      if (refs.floating.current?.contains(event.target)) return
+      setContextMenu(false)
+      selectionRef.current = null
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    return () => document.removeEventListener('pointerdown', handlePointerDown, true)
+  }, [contextMenu, refs.floating])
 
   function closeContextMenu() {
     setContextMenu(false)
@@ -83,9 +94,6 @@ export function HighlightableContent({
     <div
       className={className}
       onContextMenu={handleContextMenu}
-      onClick={(event) => {
-        if (!event.target.closest('[data-highlight-menu]')) closeContextMenu()
-      }}
     >
       <EditorContent className="exam-passage-editor" editor={editor} />
       {contextMenu && allowHighlight && (
@@ -136,7 +144,7 @@ export function PassageViewer({ text, title, allowHighlight = true, savedContent
       )}
       <HighlightableContent
         allowHighlight={allowHighlight}
-        className="text-[13px] leading-[1.65] text-slate-700"
+        className="text-[14px] leading-[1.65] text-slate-700"
         content={textToHtml(text)}
         onContentChange={onContentChange}
         savedContent={savedContent}

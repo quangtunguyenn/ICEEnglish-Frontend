@@ -43,6 +43,18 @@ test('orders lesson objects with descriptions and preserves access flags and ori
   assert.equal(titles[0].videoId, 'video-23')
 })
 
+test('orders by position segment-wise with unpositioned videos last', () => {
+  const titles = [
+    { title: 'Z chưa có số', position: null },
+    { title: 'b', position: '1.10' },
+    { title: 'c', position: '2' },
+    { title: 'a', position: '1.9' },
+    { title: 'd', position: '1' },
+  ]
+
+  assert.deepEqual(sortVideoTitles(titles).map((video) => video.title), ['d', 'a', 'b', 'c', 'Z chưa có số'])
+})
+
 test('selects the requested ID without falling back to an unrelated video', () => {
   const titles = [{ videoId: 1, title: 'Chuyên đề 1' }, { videoId: 2, title: 'Chuyên đề 2' }]
 

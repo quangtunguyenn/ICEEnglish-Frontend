@@ -9,6 +9,7 @@ Trước khi sử dụng, triển khai backend và áp dụng migration `V6__Cre
 ## Hành vi
 
 - Khách thấy metadata bài published, bấm bài khóa sẽ đến đăng nhập; backend vẫn phải kiểm tra quyền ở mọi request. Học sinh được mở mọi bài published.
+- Ảnh bìa dùng `coverImageUrl` trong metadata bài đọc, hiển thị ở danh sách và chi tiết khi có; nếu tải ảnh thất bại, giao diện báo không tải được ảnh.
 - Nội dung và bản dịch được render dưới dạng văn bản thuần. Người đọc có thể bật bản dịch theo từng đoạn.
 - Mỗi lựa chọn gửi `revision` và `selectedOption` đến API trả lời của câu hỏi, hiển thị phản hồi ngay và có thể thử lại. Thống kê đúng/tổng câu dựa trên **lựa chọn gần nhất** trong lần xem hiện tại, không lưu server. Không có API nộp cả bài.
 - Nếu nhận `409` khi trả lời, tải lại bài để lấy revision mới; các lựa chọn tạm bị xóa.

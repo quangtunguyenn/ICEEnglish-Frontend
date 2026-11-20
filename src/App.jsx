@@ -2,6 +2,7 @@ import { lazy, Suspense, useLayoutEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { useGuestMode } from './hooks/useGuestMode'
 import { RouteSeo } from './components/RouteSeo'
+import { ConsultationInviteProvider } from './components/ConsultationInvite'
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })))
 const MasterclassPage = lazy(() => import('./pages/MasterclassPage').then((module) => ({ default: module.MasterclassPage })))
@@ -32,6 +33,7 @@ function App() {
     <BrowserRouter>
       <RouteSeo />
       <RouteScroll />
+      <ConsultationInviteProvider>
       <Routes>
         <Route path="/dang-nhap" element={<Suspense fallback={null}><LoginPage /></Suspense>} />
         <Route path="/quan-tri" element={<Suspense fallback={null}><AdminPage /></Suspense>} />
@@ -58,6 +60,7 @@ function App() {
         </Route>
         <Route path="*" element={<Navigate replace to="/" />} />
       </Routes>
+      </ConsultationInviteProvider>
     </BrowserRouter>
   )
 }

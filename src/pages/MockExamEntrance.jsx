@@ -30,7 +30,7 @@ async function findExamTitle(examId, guest) {
   if (guest) {
     const exams = await getGuestExams("MOCK");
     if (!Array.isArray(exams))
-      throw new Error("Dữ liệu danh sách đề thi không hợp lệ.");
+      throw new Error("Không thể tải danh sách đề thi lúc này. Vui lòng tải lại trang.");
     const exam = exams.find((item) => String(item.id) === examId);
     if (!exam) throw new Error("Không tìm thấy đề thi thử đã chọn.");
     return exam.title || exam.name || "Đề thi thử";
@@ -40,7 +40,7 @@ async function findExamTitle(examId, guest) {
   while (page < totalPages && page < 200) {
     const result = await getMockExams({ page, size: 100 });
     if (!Array.isArray(result?.items))
-      throw new Error("Dữ liệu danh sách đề thi không hợp lệ.");
+      throw new Error("Không thể tải danh sách đề thi lúc này. Vui lòng tải lại trang.");
     const exam = result.items.find((item) => String(item.id) === examId);
     if (exam) return exam.title || exam.name || "Đề thi thử";
     totalPages = Number(result.totalPages) || 0;
@@ -155,6 +155,10 @@ function EntranceContent({ examId, guest }) {
   function handleLogin(event) {
     event.preventDefault();
     if (!profile || !title) return;
+    if (guest) {
+      navigate(`/thi-thu/${encodeURIComponent(examId)}`);
+      return;
+    }
     const loginError = getMockLoginError(profile, studentIrn, password);
     if (loginError) {
       setError(loginError);
@@ -267,7 +271,7 @@ function EntranceContent({ examId, guest }) {
           />
           <p className="mt-4 flex items-center justify-center gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-[#102b59]"></p>
           <h1 className="mt-4 font-gf text-[24px] font-bold text-[#2042a0]">
-            ĐĂNG NHẬP LÀM BÀI THI
+            {guest ? "THI THỬ TRẢI NGHIỆM" : "ĐĂNG NHẬP LÀM BÀI THI"}
           </h1>
         </header>
         <label className="mt-6 block font-google-sans text-[15px] font-medium">
@@ -281,9 +285,10 @@ function EntranceContent({ examId, guest }) {
               aria-describedby={error ? "mock-login-error" : undefined}
               aria-invalid={Boolean(error)}
               autoComplete="off"
-              className={`${fieldClass} pl-10`}
+              className={`${guest ? readOnlyClass : fieldClass} pl-10`}
               name="mock-student-irn"
               onChange={handleField(setStudentIrn)}
+              readOnly={guest}
               required
               value={studentIrn}
             />
@@ -305,22 +310,25 @@ function EntranceContent({ examId, guest }) {
               aria-describedby={error ? "mock-login-error" : undefined}
               aria-invalid={Boolean(error)}
               autoComplete="new-password"
-              className={`${fieldClass} pl-10 pr-11`}
+              className={`${guest ? readOnlyClass : fieldClass} pl-10 ${guest ? "pr-3" : "pr-11"}`}
               id="mock-password"
               name="mock-practice-password"
               onChange={handleField(setPassword)}
+              readOnly={guest}
               required
               type={showPassword ? "text" : "password"}
               value={password}
             />
-            <button
-              aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-              className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-3 text-slate-500 transition hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-blue-700"
-              onClick={() => setShowPassword(!showPassword)}
-              type="button"
-            >
-              <FieldIcon name={showPassword ? "eyeOff" : "eye"} />
-            </button>
+            {!guest && (
+              <button
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-3 text-slate-500 transition hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-blue-700"
+                onClick={() => setShowPassword(!showPassword)}
+                type="button"
+              >
+                <FieldIcon name={showPassword ? "eyeOff" : "eye"} />
+              </button>
+            )}
           </span>
         </div>
         <label className="mt-8 block font-google-sans text-[15px] font-medium">
@@ -352,12 +360,13 @@ function EntranceContent({ examId, guest }) {
             {error}
           </p>
         )}
+        
         <button
           className={`${actionClass} mt-8 mb-18 w-full`}
           disabled={loading || Boolean(loadError)}
           type="submit"
         >
-          {loading && !loadError ? "Đang tải thông tin..." : "Đăng nhập"}
+          {loading && !loadError ? "Đang tải thông tin..." : guest ? "Vào thi" : "Đăng nhập"}
         </button>
       </form>
       <Link

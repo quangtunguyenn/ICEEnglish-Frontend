@@ -20,7 +20,8 @@ after(async () => {
 test('footer shows honest contact and social placeholders without dead links', () => {
   const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(SiteFooter)))
 
-  assert.match(html, /Số điện thoại/)
+  assert.equal((html.match(/Số điện thoại/g) ?? []).length, 1)
+  assert.match(html, /href="tel:0327357150">0327 357 150<\/a>/)
   assert.match(html, /Email \/ Gmail/)
   assert.equal((html.match(/Chưa cập nhật/g) ?? []).length, 2)
   assert.match(html, /Facebook: chưa cập nhật liên kết/)

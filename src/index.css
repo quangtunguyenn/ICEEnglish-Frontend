@@ -3,6 +3,34 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+@layer base {
+  :where(
+    a[href],
+    button:enabled,
+    select:enabled,
+    input:enabled:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"], [type="file"], [type="range"]),
+    summary,
+    [role="button"],
+    [role="tab"],
+    [role="checkbox"],
+    [role="radio"],
+    [role="switch"],
+    [role="menuitem"]
+  ):not([aria-disabled="true"]),
+  :where(label:has(input:enabled:is([type="checkbox"], [type="radio"], [type="file"]))) {
+    cursor: pointer;
+  }
+
+  :where(button, select, input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"], [type="file"], [type="range"])):disabled,
+  :where([role="button"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="menuitem"])[aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  input[type="file"]::file-selector-button {
+    cursor: inherit;
+  }
+}
+
 
 :root {
   font-family:
@@ -36,6 +64,15 @@
   --font-bangers : "Bangers", sans-serif;
   --font-cal-sans : "Cal Sans", sans-serif;
   --color-ice-navy: #102b5c;
+    --color-ice-score-needs-work: #57816c;
+  --color-ice-score-needs-work-text: #35604a;
+  --color-ice-score-needs-work-dark: #a5c9b0;
+  --color-ice-score-pass: #6ee7b7;
+  --color-ice-score-pass-text: #047857;
+  --color-ice-score-pass-dark: #6ee7b7;
+  --color-ice-score-excellent: #9b6b00;
+  --color-ice-score-excellent-text: #805800;
+  --color-ice-score-excellent-dark: #f5b82e;
   --color-ice-gold: #F5B82E;
   --color-ice-gold-50: color-mix(in srgb, var(--color-ice-gold), white 94%);
   --color-ice-gold-100: color-mix(in srgb, var(--color-ice-gold), white 85%);

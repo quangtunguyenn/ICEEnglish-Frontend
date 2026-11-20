@@ -23,5 +23,5 @@ export function getExamStartedAt(...values) {
     const timestamp = typeof value === 'number' ? value : Date.parse(value)
     if (Number.isFinite(timestamp)) return new Date(timestamp).toISOString()
   }
-  return new Date().toISOString()
+  return ''
 }

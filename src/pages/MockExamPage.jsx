@@ -1,18 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  LabelList,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { ExamPager, ExamSearchForm } from "../components/ExamListControls";
 import { BrandPageIntro } from "../components/PageIntro";
+import { GuestExamBadge, guestRowClass, isExamLockedForGuest, LockedExamButton } from "../components/LockedExamButton";
 import { useGuestMode } from "../hooks/useGuestMode";
 import { PAGE_SIZE, useExamPagination } from "../hooks/useExamPagination";
 import {
@@ -20,11 +10,14 @@ import {
   getMockReview,
   getMockScores,
 } from "../services/api";
+import { formatDate, formatScore } from "../utils/mockScoreFormat";
+import { getScoreTone } from "../utils/scoreTone";
+
+const MockScoreChart = lazy(() => import("../components/MockScoreChart"));
 
 const SKELETON_COUNT = 7;
 const PREVIEW_DELAY_MS = 70;
 const CLOSE_DELAY_MS = 200;
-const MAX_LABELLED_POINTS = 8;
 const isDesktop = () => window.matchMedia("(min-width: 1024px)").matches;
 
 const NAVY_COLOR = "#0b2545";
@@ -94,55 +87,6 @@ function parseScore(score) {
   return Number.isFinite(value) ? value : null;
 }
 
-function formatScore(value) {
-  return value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
-}
-
-function formatDate(value, full = false) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat(
-    "vi-VN",
-    full
-      ? { day: "2-digit", month: "2-digit", year: "numeric" }
-      : { day: "2-digit", month: "2-digit" },
-  ).format(date);
-}
-
-// Màu không phải là kênh duy nhất: luôn đi kèm nhãn chữ.
-function getScoreTone(value) {
-  if (value >= 8)
-    return {
-      label: "Rất tốt",
-      stroke: "stroke-emerald-700",
-      strokeDark: "stroke-emerald-300",
-      text: "text-emerald-700",
-      textDark: "text-emerald-300",
-      fill: "bg-emerald-300",
-      hex: "#6ee7b7",
-    };
-  if (value >= 5)
-    return {
-      label: "Đạt",
-      stroke: "stroke-amber-700",
-      strokeDark: "stroke-amber-300",
-      text: "text-amber-700",
-      textDark: "text-amber-300",
-      fill: "bg-amber-300",
-      hex: "#fcd34d",
-    };
-  return {
-    label: "Cần ôn thêm",
-    stroke: "stroke-rose-700",
-    strokeDark: "stroke-rose-300",
-    text: "text-rose-700",
-    textDark: "text-rose-300",
-    fill: "bg-rose-300",
-    hex: "#fda4af",
-  };
-}
-
 // Mốc kế tiếp tính trực tiếp từ điểm gần nhất, không cần thêm dữ liệu từ API.
 function getMilestoneText(value) {
   if (value == null) return "Hoàn thành bài thi thử để xem điểm của bạn.";
@@ -165,13 +109,6 @@ function buildChartData(scores) {
       submittedAt: item.submittedAt,
       dateLabel: formatDate(item.submittedAt),
     }));
-}
-
-// Chỉ hiện tối đa vài mốc ngày trên trục X để không bị chồng chữ.
-function getTickIndexes(count, max = 6) {
-  if (count <= max) return Array.from({ length: count }, (_, index) => index);
-  const step = (count - 1) / (max - 1);
-  return Array.from({ length: max }, (_, index) => Math.round(index * step));
 }
 
 /* ---------- Icon ---------- */
@@ -241,7 +178,7 @@ function ScoreRing({ value, large = false, onDark = false }) {
   const ratio = attempted ? Math.min(Math.max(value / 10, 0), 1) : 0;
   const display = attempted ? formatScore(value) : "–";
   const sizeClass = large ? "h-28 w-28" : "h-11 w-11";
-  const arc = onDark ? tone?.strokeDark : tone?.stroke;
+  const arc = tone?.stroke;
 
   let numberColor = onDark ? "text-white/75" : "text-slate-500";
   if (attempted) numberColor = onDark ? "text-white" : "text-slate-900";
@@ -349,8 +286,12 @@ const ACTION_STYLES = {
 };
 
 // Đề đã thi: chỉ được xem lại (Review). Đề chưa thi: vào phòng thi.
-function ExamActions({ exam, title, attempted, reviewing, onReview, variant }) {
+function ExamActions({ exam, title, attempted, reviewing, onReview, variant, locked }) {
   const style = ACTION_STYLES[variant];
+
+  if (locked) {
+    return <LockedExamButton label="Đăng ký để vào thi" title={title} />;
+  }
 
   if (attempted) {
     return (
@@ -458,202 +399,6 @@ function ExamActions({ exam, title, attempted, reviewing, onReview, variant }) {
   );
 }
 
-function ScoreDot({ cx, cy, payload }) {
-  if (!Number.isFinite(cx) || !Number.isFinite(cy) || !payload) return null;
-  return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={5}
-      fill={getScoreTone(Number(payload.score)).hex}
-      stroke="#102b5c"
-      strokeWidth={2}
-    />
-  );
-}
-
-function ScoreTooltip({ active, payload }) {
-  if (!active || !payload?.length) return null;
-  const item = payload[0].payload || {};
-  const score = Number(item.score);
-  const tone = getScoreTone(score);
-
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-lg">
-      <p className="font-bold text-slate-900">
-        {item.examTitle || "Bài thi thử"}
-      </p>
-      <p className="mt-1 text-slate-700">
-        Điểm: <strong className="text-slate-900">{formatScore(score)}</strong>{" "}
-        <span className={`font-semibold ${tone.text}`}>({tone.label})</span>
-      </p>
-      <p className="text-slate-500">
-        Ngày làm: {formatDate(item.submittedAt, true)}
-      </p>
-    </div>
-  );
-}
-
-function StatTile({ label, value, note, noteClass = "text-white/75" }) {
-  return (
-    <div className="rounded-2xl bg-white/10 p-4">
-      <p className="font-raleway text-xs font-semibold text-white/75">
-        {label}
-      </p>
-      <p className="mt-1 font-momo text-2xl font-bold leading-none text-white">
-        {value}
-      </p>
-      <p className={`mt-2 text-xs leading-snug ${noteClass}`}>{note}</p>
-    </div>
-  );
-}
-
-function ScoreChart({ data }) {
-  const latest = data[data.length - 1];
-  const previous = data[data.length - 2];
-  const best = data.reduce(
-    (top, item) => (item.score > top.score ? item : top),
-    data[0],
-  );
-  const average = data.reduce((sum, item) => sum + item.score, 0) / data.length;
-  const delta = previous ? latest.score - previous.score : null;
-
-  let deltaText = "Lần thi đầu tiên";
-  let deltaClass = "text-white/75";
-  if (delta !== null && delta > 0) {
-    deltaText = `Tăng ${formatScore(delta)} so với lần trước`;
-    deltaClass = "text-emerald-300";
-  } else if (delta !== null && delta < 0) {
-    deltaText = `Giảm ${formatScore(Math.abs(delta))} so với lần trước`;
-    deltaClass = "text-rose-300";
-  } else if (delta === 0) {
-    deltaText = "Bằng lần trước";
-  }
-
-  const summary = `Biểu đồ điểm thi thử qua ${data.length} lần thi. Gần nhất ${formatScore(
-    latest.score,
-  )}, cao nhất ${formatScore(best.score)}, trung bình ${formatScore(average)}.`;
-
-  return (
-    <>
-      <div className="mt-6 grid grid-cols-3 gap-3">
-        <StatTile
-          label="Gần nhất"
-          note={deltaText}
-          noteClass={deltaClass}
-          value={formatScore(latest.score)}
-        />
-        <StatTile
-          label="Cao nhất"
-          note={`Ngày ${best.dateLabel}`}
-          value={formatScore(best.score)}
-        />
-        <StatTile
-          label="Trung bình"
-          note={`Qua ${data.length} lần thi`}
-          value={formatScore(average)}
-        />
-      </div>
-
-      <div aria-label={summary} className="mt-6 h-60 w-full" role="img">
-        <ResponsiveContainer height="100%" width="100%">
-          <AreaChart
-            data={data}
-            margin={{ top: 22, right: 18, left: 0, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="mock-score-fill" x1="0" x2="0" y1="0" y2="1">
-                <stop
-                  offset="0%"
-                  stopColor="var(--color-ice-gold)"
-                  stopOpacity={0.32}
-                />
-                <stop
-                  offset="100%"
-                  stopColor="var(--color-ice-gold)"
-                  stopOpacity={0}
-                />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="rgba(255,255,255,0.1)" vertical={false} />
-            <XAxis
-              axisLine={false}
-              dataKey="index"
-              domain={data.length === 1 ? [-1, 1] : [0, data.length - 1]}
-              interval={0}
-              padding={{ left: 14, right: 14 }}
-              tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 12 }}
-              tickFormatter={(index) => data[index]?.dateLabel ?? ""}
-              tickLine={false}
-              ticks={getTickIndexes(data.length)}
-              type="number"
-            />
-            <YAxis
-              axisLine={false}
-              domain={[0, 10]}
-              tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 12 }}
-              tickLine={false}
-              ticks={[0, 5, 8, 10]}
-              width={28}
-            />
-            <ReferenceLine
-              label={{
-                value: "Rất tốt",
-                position: "insideBottomRight",
-                fill: "rgba(255,255,255,0.7)",
-                fontSize: 11,
-              }}
-              stroke="rgba(255,255,255,0.35)"
-              strokeDasharray="4 4"
-              y={8}
-            />
-            <ReferenceLine
-              label={{
-                value: "Đạt",
-                position: "insideBottomRight",
-                fill: "rgba(255,255,255,0.7)",
-                fontSize: 11,
-              }}
-              stroke="rgba(255,255,255,0.35)"
-              strokeDasharray="4 4"
-              y={5}
-            />
-            <Tooltip
-              content={<ScoreTooltip />}
-              cursor={{
-                stroke: "rgba(255,255,255,0.35)",
-                strokeDasharray: "4 4",
-              }}
-            />
-            <Area
-              activeDot={{ r: 8, strokeWidth: 0, fill: "#ffffff" }}
-              animationDuration={900}
-              animationEasing="ease-out"
-              dataKey="score"
-              dot={<ScoreDot />}
-              fill="url(#mock-score-fill)"
-              stroke="var(--color-ice-gold)"
-              strokeWidth={3}
-              type="monotone"
-            >
-              {data.length <= MAX_LABELLED_POINTS && (
-                <LabelList
-                  dataKey="score"
-                  fill="#ffffff"
-                  fontSize={12}
-                  formatter={(value) => formatScore(Number(value))}
-                  offset={12}
-                  position="top"
-                />
-              )}
-            </Area>
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    </>
-  );
-}
-
 /* Trạng thái mặc định của bảng bên phải: tổng quan năng lực. */
 function Overview({ guest, scores, loading, error, onRetry }) {
   const data = useMemo(() => buildChartData(scores), [scores]);
@@ -714,7 +459,18 @@ function Overview({ guest, scores, loading, error, onRetry }) {
       </div>
     );
   } else {
-    body = <ScoreChart data={data} />;
+    body = (
+      <Suspense
+        fallback={
+          <div
+            aria-hidden="true"
+            className="mt-6 h-60 rounded-2xl bg-white/10 motion-safe:animate-pulse"
+          />
+        }
+      >
+        <MockScoreChart data={data} />
+      </Suspense>
+    );
   }
 
   return (
@@ -792,6 +548,7 @@ function DetailContent({ exam, guest, reviewing, onReview }) {
         <ExamActions
           attempted={attempted}
           exam={exam}
+          locked={isExamLockedForGuest(guest, exam)}
           onReview={onReview}
           reviewing={reviewing}
           title={title}
@@ -899,7 +656,7 @@ function ExamRow({
         className={`relative rounded-2xl border bg-white transition-[border-color,box-shadow] duration-300 ${
           active
             ? "border-ice-gold-300 shadow-[0_12px_30px_-18px_rgba(16,43,92,0.35)]"
-            : "border-slate-200/80 hover:border-ice-gold-300"
+            : `border-slate-200/80 hover:border-ice-gold-300 ${guestRowClass(guest, exam)}`
         }`}
       >
         <button
@@ -952,6 +709,7 @@ function ExamRow({
           </span>
 
           <span className="min-w-0 flex-1">
+            <GuestExamBadge exam={exam} guest={guest} />
             <span className="block break-words font-gf text-xl font-bold leading-snug text-slate-900">
               {title}
             </span>
@@ -984,6 +742,7 @@ function ExamRow({
                 <ExamActions
                   attempted={attempted}
                   exam={exam}
+                  locked={isExamLockedForGuest(guest, exam)}
                   onReview={onReview}
                   reviewing={reviewing}
                   title={title}

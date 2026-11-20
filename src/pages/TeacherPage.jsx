@@ -136,6 +136,9 @@ export function TeacherPage() {
             src="/ice_english_emblem_vector.svg"
           />
           <div className="relative z-10">
+            <Link className="inline-flex rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#102b5c] hover:bg-slate-100" to="/quan-tri">
+              Quản lý đề thi
+            </Link>
      
             <h1 className="mt-5 max-w-3xl font-gf text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
               Kết quả học tập,

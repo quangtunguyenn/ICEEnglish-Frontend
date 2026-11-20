@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMatch, useNavigate, useParams } from 'react-router-dom'
 import { ExamTakeView } from '../components/ExamTakeView'
+import { useConsultationInvite } from '../components/ConsultationInvite'
 import { useExamTimer } from '../hooks/useExamTimer'
+import { useActivePartTracking } from '../hooks/useActivePartTracking'
 import {
   getApiErrorMessage,
   getGuestExam,
@@ -14,6 +16,7 @@ import { applyDisplayNumbers } from '../utils/examNumbering'
 import { getExamCandidate, getExamStartedAt } from '../utils/examHeader'
 import { exitFullscreenIfNeeded } from '../utils/fullscreen'
 import { getServerRemainingMs } from '../utils/serverTime'
+import { scrollExamQuestionIntoView } from '../utils/navigationScroll'
 
 function getGuestAttemptKey(examId) {
   return `iceenglish:guest-exam:${encodeURIComponent(String(examId))}`
@@ -37,6 +40,7 @@ export function GuestExamTakePage() {
   const { examId } = useParams()
   const isMockRoute = Boolean(useMatch('/thi-thu/:examId'))
   const navigate = useNavigate()
+  const promptConsultation = useConsultationInvite()
   const [exam, setExam] = useState(null)
   const [submissionId, setSubmissionId] = useState('')
   const [answers, setAnswers] = useState({})
@@ -44,6 +48,7 @@ export function GuestExamTakePage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [timerUnavailable, setTimerUnavailable] = useState(false)
   const [warning, setWarning] = useState('')
   const [saveStatus, setSaveStatus] = useState(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -55,9 +60,14 @@ export function GuestExamTakePage() {
   const timerDeadlineRef = useRef(null)
   const startRequestRef = useRef(null)
   const submitInFlightRef = useRef(false)
-  const autoSubmittedRef = useRef(false)
   const questionRefs = useRef({})
   const activePart = exam?.parts?.[partIndex]
+  const activePartId = activePart?.id || activePart?.partId
+  const sendActivePart = useCallback(
+    (partId) => setGuestExamActivePart(examId, partId, submissionId),
+    [examId, submissionId],
+  )
+  const { trackingError, trackingUnavailable, retryTracking } = useActivePartTracking(submissionId ? activePartId : null, sendActivePart)
   const activePartKey = activePart?.id || activePart?.partId || String(partIndex)
   useExamTimer(activePart?.id)
   const candidate = useMemo(() => getExamCandidate(true), [])
@@ -73,10 +83,8 @@ export function GuestExamTakePage() {
       setSubmissionId('')
       setAnswers({})
       timerDeadlineRef.current = null
-      autoSubmittedRef.current = false
       try {
         const saved = retry === 0 ? readGuestAttempt(examId) : null
-        const requestStartedAt = new Date().toISOString()
         let started
         try {
           const requestKey = `${examId}:${retry}`
@@ -96,8 +104,16 @@ export function GuestExamTakePage() {
         }
 
         const attemptId = started?.submissionId || started?.submission_id
-        if (!attemptId) throw new Error('API bắt đầu đề khách không trả về mã phiên.')
+        if (!attemptId) throw new Error('Không thể bắt đầu lượt làm bài lúc này. Vui lòng thử lại.')
 
+        const receivedAt = performance.now()
+        let deadlineAt = null
+        if (isMockRoute || String(started.mode).toUpperCase() === 'MOCK') {
+          if (!Number.isFinite(Date.parse(started?.serverNow)) || !Number.isFinite(Date.parse(started?.expiresAt))) {
+            throw new Error('Không thể xác định thời hạn thi từ hệ thống. Vui lòng thử lại.')
+          }
+          deadlineAt = receivedAt + getServerRemainingMs(started)
+        }
         const detail = await getGuestExam(examId, attemptId)
         if (!active) return
         const parts = applyDisplayNumbers(detail?.parts || started?.parts || [])
@@ -109,21 +125,13 @@ export function GuestExamTakePage() {
           mode: started.mode || detail.mode,
           examId: detail.examId || started.examId || examId,
         }
-        const startedAt = getExamStartedAt(
-          saved?.submissionId === attemptId ? saved.startedAt : null,
-          started.startedAt,
-          started.started_at,
-          started.createdAt,
-          started.created_at,
-          requestStartedAt,
-        )
+        const startedAt = getExamStartedAt(started.startedAt)
         if (isMockRoute || String(loadedExam.mode).toUpperCase() === 'MOCK') {
-          if (!Number.isFinite(Date.parse(started?.serverNow)) || !Number.isFinite(Date.parse(started?.expiresAt))) {
+          if (deadlineAt === null) {
             throw new Error('Đề thi thử không có thời lượng hợp lệ.')
           }
-          const remainingMs = getServerRemainingMs(started)
-          timerDeadlineRef.current = performance.now() + remainingMs
-          setRemainingSeconds(Math.max(0, Math.ceil(remainingMs / 1000)))
+          timerDeadlineRef.current = deadlineAt
+          setRemainingSeconds(Math.max(0, Math.ceil((deadlineAt - performance.now()) / 1000)))
         }
         setSubmissionId(attemptId)
         setExam(loadedExam)
@@ -142,7 +150,10 @@ export function GuestExamTakePage() {
           setWarning('Không lưu được lượt làm tạm thời trên trình duyệt; tránh tải lại trang.')
         }
       } catch (requestError) {
-        if (active) setError(getApiErrorMessage(requestError, 'Không thể tải đề mẫu. Vui lòng thử lại.'))
+        if (active && requestError?.response?.status === 403) {
+          promptConsultation()
+          navigate(isMockRoute ? '/thi-thu' : '/luyen-de', { replace: true })
+        } else if (active) setError(getApiErrorMessage(requestError, 'Không thể tải đề mẫu. Vui lòng thử lại.'))
       } finally {
         if (active) setLoading(false)
       }
@@ -162,14 +173,6 @@ export function GuestExamTakePage() {
     return () => window.clearInterval(timerId)
   }, [isMock, exam])
 
-  useEffect(() => {
-    if (!exam || !submissionId || !activePart?.id && !activePart?.partId) return
-    const partId = activePart.id || activePart.partId
-    setGuestExamActivePart(examId, partId, submissionId).catch((requestError) => {
-      setError(getApiErrorMessage(requestError, 'Không ghi nhận được phần đang làm. Hãy thử chuyển phần lại.'))
-    })
-  }, [activePart, exam, examId, submissionId])
-
   const questionItems = useMemo(
     () => exam?.parts?.flatMap((part, index) =>
       (part.questions || []).map((question) => ({ ...question, partIndex: index })),
@@ -181,7 +184,7 @@ export function GuestExamTakePage() {
 
   useEffect(() => {
     const question = activePart?.questions?.[questionPositions[activePartKey] || 0]
-    questionRefs.current[question?.id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    scrollExamQuestionIntoView(questionRefs.current[question?.id])
   }, [activePart, activePartKey, questionPositions])
 
   const handleSubmit = useCallback(async () => {
@@ -208,7 +211,7 @@ export function GuestExamTakePage() {
           answerUrlError = getApiErrorMessage(answerError, 'Không thể tải liên kết đáp án.')
         }
       }
-      const guestResult = { ...result, guest: true, answerUrl, answerUrlError, resultMode: isMock ? 'mock' : 'practice' }
+      const guestResult = { ...result, examId, submissionId, guest: true, answerUrl, answerUrlError, resultMode: isMock ? 'mock' : 'practice' }
       try {
         sessionStorage.removeItem(getGuestAttemptKey(examId))
       } catch {
@@ -227,25 +230,13 @@ export function GuestExamTakePage() {
       }
       navigate('/ket-qua/khach', { state: { result: guestResult, guest: true, submissionWarnings } })
     } catch (requestError) {
+      if (requestError?.response?.status >= 500) setTimerUnavailable(true)
       setError(`${getApiErrorMessage(requestError, 'Không thể nộp bài.')} Phiên làm bài vẫn được giữ để bạn thử lại.`)
     } finally {
       submitInFlightRef.current = false
       setSubmitting(false)
     }
   }, [answers, exam, examId, isMock, navigate, questionItems, submissionId])
-
-  useEffect(() => {
-    if (!isMock || !exam || remainingSeconds > 0 || autoSubmittedRef.current) return
-    autoSubmittedRef.current = true
-    handleSubmit()
-  }, [exam, handleSubmit, isMock, remainingSeconds])
-
-  useEffect(() => {
-    if (!isMock || !exam || remainingSeconds > 0) return
-    const retryOnReconnect = () => handleSubmit()
-    window.addEventListener('online', retryOnReconnect)
-    return () => window.removeEventListener('online', retryOnReconnect)
-  }, [exam, handleSubmit, isMock, remainingSeconds])
 
   function goToQuestion(nextPartIndex, questionIndex) {
     const part = exam.parts[nextPartIndex]
@@ -259,7 +250,7 @@ export function GuestExamTakePage() {
   }
 
   function chooseAnswer(questionId, selectedOpt) {
-    if (submitting || (isMock && performance.now() >= timerDeadlineRef.current)) return
+    if (submitting) return
     const nextAnswers = { ...answers, [questionId]: selectedOpt }
     setAnswers(nextAnswers)
     setHasUnsavedChanges(true)
@@ -277,7 +268,7 @@ export function GuestExamTakePage() {
   }
 
   function handleSaveDraft() {
-    if (!submissionId || submitting || (isMock && remainingSeconds === 0)) return
+    if (!submissionId || submitting) return
     try {
       sessionStorage.setItem(getGuestAttemptKey(examId), JSON.stringify({ submissionId, answers }))
       setHasUnsavedChanges(false)
@@ -320,10 +311,12 @@ export function GuestExamTakePage() {
       goToPreviousPart={() => goToAdjacentPart(partIndex - 1)}
       goToQuestion={goToQuestion} guest handleSaveDraft={handleSaveDraft} handleSubmit={handleSubmit}
       hasUnsavedChanges={hasUnsavedChanges} isGeneralExam={!isMock} isMock={isMock}
-      markedQuestions={markedQuestions} mockExpired={isMock && remainingSeconds === 0}
+      markedQuestions={markedQuestions}
       partIndex={partIndex} questionCount={questionCount}
       questionItems={questionItems} questionRefs={questionRefs} remainingSeconds={remainingSeconds}
       saveStatus={saveStatus} submitting={submitting} timerStorageWarning={warning} toggleMark={toggleMark}
+      trackingError={trackingError} retryTracking={retryTracking}
+      timerUnavailable={timerUnavailable || trackingUnavailable}
     />
   )
 }

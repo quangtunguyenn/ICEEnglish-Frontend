@@ -23,7 +23,7 @@
           "opt_d": "in",
           "correct_opt": "A",
           "explanation": "Cụm từ **be connected with sth**: có liên quan đến cái gì.",
-          "related_video_id": null
+          "related_video_ids": []
         },
         {
           "order_index": 2,
@@ -34,7 +34,7 @@
           "opt_d": "program new computer",
           "correct_opt": "B",
           "explanation": "Trật tự từ: *new* (tính từ) + *computer program* (danh từ ghép).",
-          "related_video_id": null
+          "related_video_ids": []
         }
       ]
     },
@@ -54,7 +54,7 @@
           "opt_d": "b – c – a",
           "correct_opt": "A",
           "explanation": "Thủy giới thiệu anh trai (c) -> Tuấn hỏi (b) -> Thủy trả lời (a).",
-          "related_video_id": null
+          "related_video_ids": []
         },
         {
           "order_index": 4,
@@ -65,7 +65,7 @@
           "opt_d": "c – d – a – b – e",
           "correct_opt": "A",
           "explanation": "c (mở bài) -> b -> d -> a -> e (kết luận).",
-          "related_video_id": null
+          "related_video_ids": []
         }
       ]
     }

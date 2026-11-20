@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import {
   archiveExam,
   createStudent,
+  deleteDraftExams,
   getAdminExams,
   getApiErrorMessage,
   getAuthProfile,
@@ -11,10 +12,12 @@ import {
   importExam,
   logout,
   publishExam,
+  setExamGuestAccess,
   toggleExamAnswersRevealed,
   uploadLearningBundle,
 } from '../services/api'
 import { ReadingAdminSection } from '../components/ReadingAdminSection'
+import { VideoGuestAccessSection } from '../components/VideoGuestAccessSection'
 import { ConsultationAdminSection } from '../components/ConsultationAdminSection'
 import { StudentAdminList } from '../components/StudentAdminList'
 import { formatInlineText, questionToHtml, textToHtml } from '../utils/textFormatting'
@@ -30,6 +33,7 @@ const FILE_ACCEPT = 'application/json,.json,text/plain,.txt'
 const navigation = [
   { id: 'overview', label: 'Tổng quan', icon: 'dashboard', description: 'Lối tắt đến các công cụ quản trị.' },
   { id: 'bundle', label: 'Nội dung bài học', icon: 'layers', description: 'Tạo video, homework và từ vựng trong một lần tải lên.' },
+  { id: 'videos', label: 'Danh sách video', icon: 'layers', adminOnly: true, description: 'Xem ID, tên video và bật/tắt quyền xem của khách.' },
   { id: 'exams', label: 'Quản lý đề thi', icon: 'fileText', description: 'Import, preview, publish hoặc archive đề thi.' },
   { id: 'students', label: 'Tài khoản học sinh', icon: 'users', adminOnly: true, description: 'Tạo tài khoản và quản lý trạng thái học sinh.' },
   { id: 'reading', label: 'Quản lý bài đọc', icon: 'book', adminOnly: true, description: 'Quản lý nội dung bài đọc.' },
@@ -68,8 +72,13 @@ function getExamTitle(exam) {
   return exam?.title || exam?.examTitle || 'Đề chưa có tiêu đề'
 }
 
-async function fetchAllExams() {
-  const groups = await Promise.all(EXAM_MODES.map((mode) => getAdminExams(mode).catch(() => [])))
+function getGuestAccess(exam, overrides, id) {
+  if (id in overrides) return overrides[id]
+  return Boolean(exam?.guestAccessible ?? exam?.guest_accessible ?? exam?.accessible)
+}
+
+async function fetchAllExams({ strict = false } = {}) {
+  const groups = await Promise.all(EXAM_MODES.map((mode) => strict ? getAdminExams(mode) : getAdminExams(mode).catch(() => [])))
   const uniqueExams = new Map()
   groups.flat().forEach((exam) => {
     const id = getExamId(exam)
@@ -183,10 +192,10 @@ function PageHeader({ badge, description, title }) {
   return (
     <header className="mb-7">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="font-manrope text-2xl font-extrabold tracking-tight text-[#102b5c] sm:text-[1.75rem]">{title}</h1>
+        <h1 className="font-gf uppercase text-2xl font-extrabold tracking-tight text-[#102b5c] sm:text-[1.75rem]">{title}</h1>
         {badge && <Badge tone="bg-amber-50 text-amber-800 ring-amber-600/25">{badge}</Badge>}
       </div>
-      {description && <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">{description}</p>}
+      {description && <p className="mt-1.5 max-w-2xl text-sm font-inter leading-6 text-slate-500">{description}</p>}
     </header>
   )
 }
@@ -279,8 +288,8 @@ function FileDropzone({ disabled, file, id, onChange }) {
             </>
           ) : (
             <>
-              <span className="block text-sm font-semibold text-slate-800">Kéo thả file JSON vào đây</span>
-              <span className="block text-xs text-slate-500">hoặc nhấn để chọn từ máy (.json, .txt)</span>
+              <span className="block text-lg font-semibold text-slate-800">Kéo thả file JSON vào đây</span>
+              <span className="block font-gf text-sm text-slate-500">hoặc nhấn để chọn từ máy (.json, .txt)</span>
             </>
           )}
         </span>
@@ -334,7 +343,7 @@ function Toasts({ error, notice, onDismissError, onDismissNotice }) {
   )
 }
 
-function ConfirmDialog({ busy, confirmLabel, description, examId, examTitle, onCancel, onConfirm, open, title, tone }) {
+function ConfirmDialog({ busy, confirmLabel, description, error, examId, examTitle, onCancel, onConfirm, open, title, tone }) {
   const ref = useRef(null)
 
   useEffect(() => {
@@ -349,8 +358,8 @@ function ConfirmDialog({ busy, confirmLabel, description, examId, examTitle, onC
   return (
     <dialog
       className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-slate-900/50 backdrop:backdrop-blur-[2px]"
-      onCancel={(event) => { event.preventDefault(); onCancel() }}
-      onClick={(event) => { if (event.target === ref.current) onCancel() }}
+      onCancel={(event) => { event.preventDefault(); if (!busy) onCancel() }}
+      onClick={(event) => { if (!busy && event.target === ref.current) onCancel() }}
       ref={ref}
     >
       <div className="p-6">
@@ -359,13 +368,14 @@ function ConfirmDialog({ busy, confirmLabel, description, examId, examTitle, onC
         </span>
         <h2 className="mt-4 text-lg font-extrabold text-slate-900">{title}</h2>
         <p className="mt-1.5 text-sm leading-6 text-slate-600">{description}</p>
-        <div className="mt-4 rounded-xl bg-slate-50 px-3.5 py-3 ring-1 ring-inset ring-slate-200">
+        {examTitle && <div className="mt-4 rounded-xl bg-slate-50 px-3.5 py-3 ring-1 ring-inset ring-slate-200">
           <p className="line-clamp-2 text-sm font-semibold text-slate-800">{examTitle}</p>
           <p className="mt-0.5 break-all font-mono text-[11px] text-slate-500">{examId}</p>
-        </div>
+        </div>}
+        {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
       </div>
       <div className="flex justify-end gap-2 rounded-b-2xl border-t border-slate-100 bg-slate-50/60 px-6 py-4">
-        <Button onClick={onCancel} variant="secondary">Huỷ</Button>
+        <Button disabled={busy} onClick={onCancel} variant="secondary">Huỷ</Button>
         <Button disabled={busy} onClick={onConfirm} variant={isDanger ? 'dangerSolid' : 'success'}>{confirmLabel}</Button>
       </div>
     </dialog>
@@ -396,7 +406,9 @@ export function AdminPage() {
   const [examId, setExamId] = useState('')
   const [preview, setPreview] = useState(null)
   const [answersRevealed, setAnswersRevealed] = useState(null)
+  const [guestOverrides, setGuestOverrides] = useState({})
   const [confirmAction, setConfirmAction] = useState(null)
+  const deletingDrafts = useRef(false)
   const busy = busyKey !== ''
 
   useEffect(() => {
@@ -475,8 +487,8 @@ export function AdminPage() {
     }
   }
 
-  async function refreshExamList() {
-    setExams(await fetchAllExams())
+  async function refreshExamList(options) {
+    setExams(await fetchAllExams(options))
   }
 
   function changeSection(id) {
@@ -537,6 +549,35 @@ export function AdminPage() {
 
   async function runConfirmed() {
     const kind = confirmAction
+    if (kind === 'deleteDrafts') {
+      if (deletingDrafts.current) return
+      deletingDrafts.current = true
+      setBusyKey('deleteDrafts')
+      setError('')
+      setNotice('')
+      try {
+        const count = await deleteDraftExams()
+        setConfirmAction(null)
+        setExamId('')
+        setPreview(null)
+        setAnswersRevealed(null)
+        setGuestOverrides({})
+        setNotice(`Đã xóa ${count} đề nháp.`)
+        try {
+          await refreshExamList({ strict: true })
+        } catch (requestError) {
+          setError(`Đã xóa đề nháp nhưng không tải lại được danh sách đề. ${getApiErrorMessage(requestError)}`)
+        }
+      } catch (requestError) {
+        if (requestError.response?.status === 401) setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+        else if (requestError.response?.status === 403) setError('Bạn không có quyền xóa đề nháp.')
+        else setError(getApiErrorMessage(requestError, 'Không thể xóa đề nháp. Vui lòng thử lại.'))
+      } finally {
+        deletingDrafts.current = false
+        setBusyKey('')
+      }
+      return
+    }
     setConfirmAction(null)
     if (kind === 'publish') await handlePublish()
     if (kind === 'archive') await handleArchive()
@@ -558,6 +599,14 @@ export function AdminPage() {
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'Không thể xác minh trạng thái đáp án.'))
     }
+  }
+
+  async function handleToggleGuestAccess() {
+    const next = !getGuestAccess(selectedExam, guestOverrides, examId)
+    const result = await runAction('guest', () => setExamGuestAccess(examId, next))
+    if (result === null) return
+    setGuestOverrides((current) => ({ ...current, [examId]: next }))
+    setNotice(next ? 'Khách đã được phép trải nghiệm đề này.' : 'Đề này đã được khóa với khách.')
   }
 
   async function handleCopyId() {
@@ -619,7 +668,14 @@ export function AdminPage() {
   const activeItem = visibleNavigation.find((item) => item.id === activeSection)
   const displayName = profile?.fullName || profile?.username || 'Staff'
 
-  const confirmCopy = confirmAction === 'archive'
+  const confirmCopy = confirmAction === 'deleteDrafts'
+    ? {
+        title: 'Xóa tất cả đề nháp?',
+        description: 'Tất cả đề DRAFT cùng các phần và câu hỏi thuộc đề sẽ bị xóa vĩnh viễn, không thể hoàn tác. Đề PUBLISHED và ARCHIVED không bị ảnh hưởng.',
+        confirmLabel: 'Xóa tất cả đề nháp',
+        tone: 'danger',
+      }
+    : confirmAction === 'archive'
     ? {
         title: 'Archive đề thi này?',
         description: 'Đề sẽ chuyển sang trạng thái ARCHIVED và học sinh không còn truy cập được.',
@@ -763,9 +819,12 @@ export function AdminPage() {
               examType={examType}
               exams={exams}
               examsLoading={examsLoading}
+              guestOverrides={guestOverrides}
+              onToggleGuestAccess={handleToggleGuestAccess}
               onArchive={() => setConfirmAction('archive')}
               onClosePreview={() => setPreview(null)}
               onCopyId={handleCopyId}
+              onDeleteDrafts={() => { setError(''); setNotice(''); setConfirmAction('deleteDrafts') }}
               onExamFileChange={setExamFile}
               onExamIdChange={(value) => { setExamId(value); setPreview(null) }}
               onExamTypeChange={setExamType}
@@ -778,6 +837,13 @@ export function AdminPage() {
               selectedExam={selectedExam}
             />
           )}
+          {activeSection === 'videos' && isAdmin && <VideoGuestAccessSection onVideosChanged={async () => {
+            setExamId('')
+            setPreview(null)
+            setAnswersRevealed(null)
+            setGuestOverrides({})
+            await refreshExamList({ strict: true })
+          }} />}
           {activeSection === 'reading' && isAdmin && <ReadingAdminSection />}
           {activeSection === 'consultations' && <ConsultationAdminSection />}
           {activeSection === 'students' && isAdmin && (
@@ -803,8 +869,9 @@ export function AdminPage() {
         busy={busy}
         confirmLabel={confirmCopy.confirmLabel}
         description={confirmCopy.description}
+        error={confirmAction === 'deleteDrafts' ? error : ''}
         examId={examId}
-        examTitle={selectedExam ? getExamTitle(selectedExam) : 'Đề chưa có trong danh sách'}
+        examTitle={confirmAction === 'deleteDrafts' ? '' : selectedExam ? getExamTitle(selectedExam) : 'Đề chưa có trong danh sách'}
         onCancel={() => setConfirmAction(null)}
         onConfirm={runConfirmed}
         open={confirmAction !== null}
@@ -842,7 +909,7 @@ function OverviewSection({ displayName, examsCount, examsLoading, items, onNavig
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15px] font-bold text-slate-900">{item.label}</span>
-                    <span className="mt-0.5 block text-sm leading-5 text-slate-500">{item.description}</span>
+                    <span className="mt-0.5 block text-sm font-google-sans leading-5 text-slate-500">{item.description}</span>
                   </span>
                   {item.id === 'exams' && !examsLoading && (
                     <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{examsCount} đề</span>
@@ -892,7 +959,7 @@ function BundleSection({ busy, file, loading, onFileChange, onSubmit }) {
   return (
     <>
       <PageHeader
-        description="Tạo video, homework và từ vựng trong một lần tải lên."
+        description="Tạo video, homework và từ vựng trong một lần tải lên. Loại video (video.type): lecture (mặc định) bắt buộc homework và từ vựng; practice và exam_tips thì tùy chọn."
         title="Tải learning bundle"
       />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -1007,9 +1074,11 @@ function ExamsSection({
   examType,
   exams,
   examsLoading,
+  guestOverrides,
   onArchive,
   onClosePreview,
   onCopyId,
+  onDeleteDrafts,
   onExamFileChange,
   onExamIdChange,
   onExamTypeChange,
@@ -1018,9 +1087,11 @@ function ExamsSection({
   onPublish,
   onSelectExam,
   onToggleAnswers,
+  onToggleGuestAccess,
   preview,
   selectedExam,
 }) {
+  const guestAccess = getGuestAccess(selectedExam, guestOverrides, examId)
   const [query, setQuery] = useState('')
   const previewRef = useRef(null)
   const normalizedQuery = query.trim().toLowerCase()
@@ -1061,7 +1132,7 @@ function ExamsSection({
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-xs text-slate-500">Đề được import ở trạng thái DRAFT.</p>
+            <p className="mt-2 text-sm font-google-sans text-slate-500">Đề được import ở trạng thái DRAFT.</p>
           </div>
           <div>
             <p className="mb-1.5 text-sm font-semibold text-slate-700">File JSON đề thi</p>
@@ -1072,6 +1143,10 @@ function ExamsSection({
           </Button>
         </form>
       </Card>
+
+      <div className="mt-4 flex justify-end">
+        <Button disabled={busy} onClick={onDeleteDrafts} variant="danger">Xóa tất cả đề nháp</Button>
+      </div>
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[21rem_minmax(0,1fr)]">
         {/* Exam list */}
@@ -1124,8 +1199,11 @@ function ExamsSection({
                       type="button"
                     >
                       {selected && <span aria-hidden="true" className="absolute bottom-2.5 left-0 top-2.5 w-1 rounded-r-full bg-ice-gold" />}
-                      <span className={`line-clamp-2 block text-sm font-semibold ${selected ? 'text-[#102b5c]' : 'text-slate-800'}`}>{getExamTitle(exam)}</span>
-                      <span className="mt-0.5 block truncate font-gf text-[12px] text-slate-400">{id}</span>
+                      <span className={`line-clamp-2 block text-[16px] font-gf font-bold ${selected ? 'text-ice-navy' : 'text-slate-800'}`}>{getExamTitle(exam)}</span>
+                      <span className="mt-0.5 block truncate font-semibold font-gf text-[12px] text-ice-navy">{id}</span>
+                      {getGuestAccess(exam, guestOverrides, id) && (
+                        <span className="mt-1 inline-block rounded-full bg-ice-gold-100 px-2 py-0.5 text-[11px] font-bold text-ice-gold-800">Khách trải nghiệm</span>
+                      )}
                     </button>
                   </li>
                 )
@@ -1201,6 +1279,27 @@ function ExamsSection({
                 type="button"
               >
                 <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${answersRevealed === true ? 'translate-x-5' : ''}`} />
+              </button>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3.5 ring-1 ring-inset ring-slate-200">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800" id="guest-switch-label">Cho khách trải nghiệm</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-500" role="status">
+                  {!examId && 'Chọn một đề để bật hoặc tắt.'}
+                  {examId && (guestAccess ? 'Khách có thể làm đề này không cần đăng nhập.' : 'Đề đang bị khóa với khách; khách chỉ thấy tên đề.')}
+                </p>
+              </div>
+              <button
+                aria-checked={guestAccess}
+                aria-labelledby="guest-switch-label"
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${focusRing} ${guestAccess ? 'bg-emerald-600' : 'bg-slate-300'}`}
+                disabled={busy || !examId}
+                onClick={onToggleGuestAccess}
+                role="switch"
+                type="button"
+              >
+                <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${guestAccess ? 'translate-x-5' : ''}`} />
               </button>
             </div>
           </Card>
@@ -1285,7 +1384,8 @@ function ExamPreview({ onClose, preview }) {
                 {questions.map((question, questionIndex) => {
                   const correct = question.correctOpt || question.correctOption || question.correct_option
                   const number = question.orderIndex || question.order_index || questionIndex + 1
-                  const videoId = question.relatedVideoId || question.related_video_id
+                  const relatedVideoIds = question.relatedVideoIds || question.related_video_ids ||
+                    [question.relatedVideoId || question.related_video_id].filter(Boolean)
                   return (
                     <article className="p-4 sm:p-5" key={question.id || question.questionId || questionIndex}>
                       <Rich className="text-sm font-semibold leading-6 text-slate-900 [&_p]:mb-2" html={questionToHtml(number, question.content)} />
@@ -1320,7 +1420,11 @@ function ExamPreview({ onClose, preview }) {
                           />
                         </div>
                       )}
-                      {videoId && <p className="mt-3 break-all font-mono text-[11px] text-slate-500">Video ôn tập: {videoId}</p>}
+                      {relatedVideoIds.length > 0 && (
+                        <p className="mt-3 break-all font-mono text-[11px] text-slate-500">
+                          Video ôn tập: {relatedVideoIds.join(', ')}
+                        </p>
+                      )}
                     </article>
                   )
                 })}

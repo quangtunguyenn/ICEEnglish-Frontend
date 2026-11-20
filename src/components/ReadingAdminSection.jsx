@@ -127,7 +127,7 @@ export function ReadingAdminSection() {
       {!loading && page && (
         <div className="mt-4 space-y-2">
           {!page.items.length && <p className="text-sm text-slate-500">Không có bài đọc phù hợp.</p>}
-          {page.items.map((blog) => <button className={`w-full rounded-lg border p-4 text-left ${selectedId === blog.id ? 'border-cyan-600 bg-cyan-50' : 'border-slate-200 bg-white'}`} disabled={busy} key={blog.id} onClick={() => loadPreview(blog.id)} type="button"><strong>{blog.title}</strong><span className="mt-1 block text-sm text-slate-600">{blog.status} · {blog.guestAccessible ? 'Khách được xem' : 'Khách bị khóa'} · {blog.topic?.name}</span></button>)}
+          {page.items.map((blog) => <button className={`w-full rounded-lg border p-4 text-left ${selectedId === blog.id ? 'border-cyan-600 bg-cyan-50' : 'border-slate-200 bg-white'}`} disabled={busy} key={blog.id} onClick={() => loadPreview(blog.id)} type="button"><strong>{blog.title}</strong><span className="mt-1 block font-gf text-sm text-slate-600">{blog.status} · {blog.guestAccessible ? 'Khách được xem' : 'Khách bị khóa'} · {blog.topic?.name}</span></button>)}
           <div className="flex items-center gap-3 pt-3"><button className={button} disabled={query.page <= 0} onClick={() => { setLoading(true); setQuery({ ...query, page: query.page - 1 }) }} type="button">Trước</button><span className="text-sm">Trang {page.totalPages ? page.page + 1 : 0} / {page.totalPages}</span><button className={button} disabled={query.page + 1 >= page.totalPages} onClick={() => { setLoading(true); setQuery({ ...query, page: query.page + 1 }) }} type="button">Sau</button></div>
         </div>
       )}

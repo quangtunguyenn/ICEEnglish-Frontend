@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ExamQuestion } from '../components/ExamQuestion'
 import { ExamIdentityBar } from '../components/ExamIdentityBar'
@@ -21,6 +21,7 @@ import {
 } from '../services/api'
 import { exitFullscreenIfNeeded } from '../utils/fullscreen'
 import { getExamCandidate, getExamStartedAt } from '../utils/examHeader'
+import { scrollExamQuestionIntoView } from '../utils/navigationScroll'
 
 function getHomeworkParts(homework) {
   const source = Array.isArray(homework)
@@ -86,6 +87,10 @@ export function HomeworkPage() {
   const questionRefs = useRef({})
   const candidate = useMemo(() => getExamCandidate(guest), [guest])
 
+  useLayoutEffect(() => {
+    if (result) window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [result])
+
   useEffect(() => {
     if (!guest && location.state?.homework) return
 
@@ -106,21 +111,14 @@ export function HomeworkPage() {
     startRequestedForRef.current = examId
     setLoading(true)
 
-    const requestStartedAt = new Date().toISOString()
     const request = guest ? startGuestHomework(videoId) : startVideoHomework(videoId)
     request
       .then((startedSubmission) => {
         const submissionId = getSubmissionId(startedSubmission)
         if (!submissionId) {
-          throw new Error('Backend bắt đầu bài tập nhưng không trả về submissionId.')
+          throw new Error('Không thể bắt đầu bài tập lúc này. Vui lòng thử lại.')
         }
-        const startedAt = getExamStartedAt(
-          startedSubmission.startedAt,
-          startedSubmission.started_at,
-          startedSubmission.createdAt,
-          startedSubmission.created_at,
-          requestStartedAt,
-        )
+        const startedAt = getExamStartedAt(startedSubmission.startedAt)
         setSubmission({ ...startedSubmission, submissionId, examId, startedAt })
         setExamStartedAt(startedAt)
       })
@@ -142,7 +140,7 @@ export function HomeworkPage() {
   useEffect(() => {
     const question = activePart?.questions[activeQuestionIndex]
     if (question) {
-      questionRefs.current[question.id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      scrollExamQuestionIntoView(questionRefs.current[question.id])
     }
   }, [activePart, activeQuestionIndex])
 
@@ -213,7 +211,6 @@ export function HomeworkPage() {
             submissionId: submission.submissionId,
             exam_id: examId,
           })
-      setResult(submittedResult)
       const completionKey = `video-homework-completed:${guest ? 'guest:' : ''}${videoId}:${examId}`
       const submittedAnswerUrl = getVideoHomeworkAnswerUrl(submittedResult)
       setAnswerError('')
@@ -231,7 +228,7 @@ export function HomeworkPage() {
         .then((answerResponse) => {
           const fetchedAnswerUrl = getVideoHomeworkAnswerUrl(answerResponse)
           if (!fetchedAnswerUrl && !guest) {
-            throw new Error('API không trả về answer_url.')
+            throw new Error('Bài tập này chưa có file đáp án chi tiết.')
           }
           setAnswerUrl(fetchedAnswerUrl)
           try {
@@ -254,6 +251,7 @@ export function HomeworkPage() {
           'Đã nộp bài nhưng trình duyệt không thể thoát chế độ toàn màn hình.',
         ].filter(Boolean).join(' '))
       }
+      setResult(submittedResult)
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'Nộp bài tập thất bại. Vui lòng thử lại.'))
     } finally {
@@ -376,8 +374,8 @@ export function HomeworkPage() {
   return (
     <div className="flex h-[calc(100vh-73px)] min-h-155 flex-col overflow-hidden bg-white text-slate-700 [:fullscreen_&]:h-screen">
       <ExamIdentityBar candidateName={candidate.fullName} candidateSbd={candidate.studentIrn} examStartedAt={examStartedAt} showIdentity={false}>
-        <span className="whitespace-nowrap text-xs font-bold text-white">
-          Số câu đã trả lời: <b className="text-emerald-300">{answeredCount}</b> / {questionItems.length}
+        <span className="whitespace-nowrap font-bold font-google-sans text-[17px] text-white">
+          Số câu đã trả lời: <b className="text-yellow-500 font-google-sans text-[17px]">{answeredCount}</b> / {questionItems.length}
         </span>
         <HomeworkPartTimer partId={activePart.id} />
         <button
@@ -386,7 +384,7 @@ export function HomeworkPage() {
           onClick={() => setSubmitConfirmationOpen(true)}
           type="button"
         >
-          {submitting ? 'Đang nộp...' : 'Nộp bài'}
+          {submitting ? 'Đang nộp...' : 'NỘP BÀI'}
         </button>
       </ExamIdentityBar>
       <div className="flex min-h-11 shrink-0 items-center border-b border-slate-200 bg-white px-4 py-2 text-xs [:fullscreen_&]:hidden">
@@ -460,7 +458,7 @@ export function HomeworkPage() {
           unansweredCount={Math.max(0, questionItems.length - answeredCount)}
         />
       )}
-      {(!hasEnteredFullscreen || securityWarning) && (
+      {!submitting && (!hasEnteredFullscreen || securityWarning) && (
         <div aria-modal="true" className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/75 p-6 backdrop-blur-sm" role="dialog">
           <div className="w-full max-w-md rounded-xl bg-white p-6 text-center shadow-2xl">
             <h2 className="text-lg font-bold text-slate-900">
@@ -491,8 +489,8 @@ function HomeworkPartTimer({ partId }) {
   const seconds = partTimes[partId] || 0
 
   return (
-    <span aria-label="Thời gian làm bài" className="flex items-center gap-1.5 whitespace-nowrap font-mono font-bold text-white" role="timer">
-      <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+    <span aria-label="Thời gian làm bài" className="flex items-center gap-1.5 whitespace-nowrap font-google-sans text-2xl font-bold  text-white" role="timer">
+      <svg aria-hidden="true" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="9" />
         <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>

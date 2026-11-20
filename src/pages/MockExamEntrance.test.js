@@ -25,7 +25,7 @@ after(async () => {
 function renderEntrance() {
   return renderToStaticMarkup(createElement(
     MemoryRouter,
-    { initialEntries: ['/thi-thu/exam-1/vao-phong'] },
+    { initialEntries: [{ pathname: '/thi-thu/exam-1/vao-phong', state: { examTitle: 'Đề thi mẫu' } }] },
     createElement(Routes, null, createElement(Route, {
       path: '/thi-thu/:examId/vao-phong',
       element: createElement(MockExamEntrance),
@@ -43,5 +43,9 @@ test('student starts with empty practice credentials, while guest credentials re
   token = null
   const guest = renderEntrance()
   assert.match(guest, /name="mock-student-irn"[^>]*value="9999010120091"/)
+  assert.match(guest, /readOnly=""[^>]*name="mock-student-irn"/)
   assert.match(guest, /name="mock-practice-password"[^>]*value="guest"/)
+  assert.match(guest, /readOnly=""[^>]*name="mock-practice-password"/)
+  assert.match(guest, /Bạn chỉ cần bấm vào thi, không cần sửa gì hết/)
+  assert.match(guest, />Vào thi<\/button>/)
 })

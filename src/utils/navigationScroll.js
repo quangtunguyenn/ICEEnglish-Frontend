@@ -19,3 +19,11 @@ export function scrollCurrentPageLinkToTop(event) {
 
   window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
 }
+
+export function scrollExamQuestionIntoView(question) {
+  const container = question?.parentElement
+  if (!container) return
+  const top = question.getBoundingClientRect().top - container.getBoundingClientRect().top +
+    container.scrollTop - container.clientTop
+  container.scrollTo({ top, behavior: 'smooth' })
+}

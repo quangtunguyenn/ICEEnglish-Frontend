@@ -12,7 +12,7 @@ function getLoginErrorMessage(error) {
   if (error?.response?.status === 401)
     return "Tên đăng nhập hoặc mật khẩu không đúng, hoặc tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên nếu cần hỗ trợ.";
   if (error?.request && !error.response) {
-    return "Không kết nối được API. Kiểm tra backend và cấu hình mạng rồi thử lại.";
+    return "Không thể kết nối tới hệ thống. Vui lòng kiểm tra mạng và thử lại.";
   }
   return getApiErrorMessage(error, "Không thể đăng nhập. Vui lòng thử lại.");
 }
@@ -76,7 +76,7 @@ export function LoginPage() {
         } catch (profileError) {
           setError(
             profileError?.request && !profileError.response
-              ? "Đăng nhập thành công nhưng không thể kết nối để xác minh vai trò. Kiểm tra API /auth/profile."
+              ? "Đăng nhập thành công nhưng chưa thể xác minh tài khoản do mạng không ổn định. Vui lòng thử đăng nhập lại."
               : getApiErrorMessage(
                   profileError,
                   "Đăng nhập thành công nhưng không lấy được thông tin tài khoản.",

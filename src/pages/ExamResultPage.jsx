@@ -1,25 +1,69 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
+import { useConsultationInvite } from '../components/ConsultationInvite'
 import { useGuestMode } from '../hooks/useGuestMode'
-import { getApiErrorMessage, getExamAnswersRevealed, getSubmissionPartLogs } from '../services/api'
+import { getApiErrorMessage, getExamAnswersRevealed, getGuestExamPartLogs, getSubmissionPartLogs } from '../services/api'
 import { buildNumberMap, renumberText } from '../utils/examNumbering'
 import { formatInlineText, questionToHtml, textToHtml } from '../utils/textFormatting'
 import { formatPracticeSubmissionDate } from '../utils/practiceHistory'
 import { ResultOverview } from '../components/ResultOverview'
 
+const EMPTY_PART_LOGS = []
+
 function formatDate(value) {
   if (!value) return '—'
+  if (!Number.isFinite(Date.parse(value))) return 'Không xác định'
   return new Intl.DateTimeFormat('vi-VN', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: 'Asia/Ho_Chi_Minh',
   }).format(new Date(value))
 }
 
 function formatDuration(seconds) {
-  const totalSeconds = Number(seconds) || 0
-  const minutes = Math.floor(totalSeconds / 60)
-  const remainingSeconds = totalSeconds % 60
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
   return `${minutes} phút ${remainingSeconds} giây`
+}
+
+function validDuration(value, minimum = 0) {
+  return Number.isSafeInteger(value) && value >= minimum
+}
+
+function formatPartName(name, displayNumber) {
+  const label = `Part ${displayNumber}`
+  const title = typeof name === 'string' ? name.trim() : ''
+  if (!title || /^part$/i.test(title)) return label
+  if (/^part\s*\d+\b/i.test(title)) return title.replace(/^part\s*\d+\b/i, label)
+  return `${label}: ${title}`
+}
+
+function PartTimeCard({ part, displayNumber, name }) {
+  const actual = part.timeSpentSeconds
+  const recommended = part.recommendedTimeSeconds
+  const hasActual = validDuration(actual)
+  const hasRecommended = validDuration(recommended)
+  const difference = hasActual && hasRecommended ? actual - recommended : null
+  const comparison = difference === null ? '' : difference === 0
+    ? 'Bằng thời gian gợi ý'
+    : `${difference > 0 ? 'Lâu hơn' : 'Ít hơn'} ${formatDuration(Math.abs(difference))} so với gợi ý`
+
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h3 className="font-bold text-slate-900">{formatPartName(name, displayNumber)}</h3>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div>
+          <p className="text-xs font-semibold text-slate-500">Thời gian đã làm</p>
+          <p className="mt-1 text-lg font-extrabold text-ice-navy">{hasActual ? formatDuration(actual) : actual == null ? 'Chưa ghi nhận' : 'Dữ liệu không hợp lệ'}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-slate-500">Thời gian gợi ý</p>
+          <p className="mt-1 text-lg font-bold text-slate-700">{hasRecommended ? formatDuration(recommended) : recommended == null ? 'Chưa có gợi ý' : 'Dữ liệu không hợp lệ'}</p>
+        </div>
+      </div>
+      {comparison && <p className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">{comparison}</p>}
+    </article>
+  )
 }
 
 function readStoredResult(submissionId) {
@@ -33,8 +77,9 @@ function readStoredResult(submissionId) {
   }
 }
 
-function groupQuestionsByPart(result) {
+function groupQuestionsByPart(result, partTimeLogs) {
   const details = result?.details || []
+  const logByPartId = new Map(partTimeLogs.map((part, index) => [String(part.partId), { ...part, position: index }]))
   const translations = new Map(
     (result?.partTranslations || []).map((part) => [part.partId, part]),
   )
@@ -44,7 +89,7 @@ function groupQuestionsByPart(result) {
   )
   const groups = new Map(parts.map((part) => [part.partId, {
     key: part.partId,
-    name: part.partName,
+    name: part.partName || logByPartId.get(String(part.partId))?.partName,
     passageText: part.passageText || part.passage_text || '',
     translate: translations.get(part.partId)?.translate || '',
     questions: [],
@@ -56,7 +101,7 @@ function groupQuestionsByPart(result) {
       const translation = translations.get(key)
       groups.set(key, {
         key,
-        name: translation?.partName || '',
+        name: translation?.partName || logByPartId.get(String(key))?.partName || '',
         passageText: translation?.passage_text || translation?.passageText || '',
         translate: translation?.translate || '',
         questions: [],
@@ -65,8 +110,13 @@ function groupQuestionsByPart(result) {
     groups.get(key).questions.push(question)
   })
 
-  return [...groups.values()]
-    .filter((group) => group.questions.length > 0)
+  const populatedGroups = [...groups.values()].filter((group) => group.questions.length > 0)
+  if (populatedGroups.every((group) => logByPartId.has(String(group.key)))) {
+    populatedGroups.sort((first, second) =>
+      logByPartId.get(String(first.key)).position - logByPartId.get(String(second.key)).position,
+    )
+  }
+  return populatedGroups
     .map((group) => {
       const map = buildNumberMap(group.questions)
       return {
@@ -87,16 +137,37 @@ function groupQuestionsByPart(result) {
 export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
   const { submissionId } = useParams()
   const location = useLocation()
+  const promptConsultation = useConsultationInvite()
   const isGuest = useGuestMode()
   const result = resultOverride || location.state?.result || readStoredResult(submissionId)
   const guest = location.state?.guest === true || result?.guest === true ||
     (isGuest && submissionId === 'khach')
   const requiresLogin = isGuest && !guest
-  const [partTimeLogs, setPartTimeLogs] = useState(result?.partTimeLogs || [])
-  const [partLogsLoading, setPartLogsLoading] = useState(Boolean(submissionId && !guest && !requiresLogin))
-  const [partLogsError, setPartLogsError] = useState('')
-  const [answerReveal, setAnswerReveal] = useState(null)
   const examId = result?.examId || result?.exam_id
+  const isHomework = result?.resultMode === 'homework' || location.state?.returnTo === '/video'
+  const embeddedPartLogs = Array.isArray(result?.partTimeLogs) &&
+    result.partTimeLogs.every((part) => part && typeof part === 'object' && part.partId)
+    ? result.partTimeLogs : null
+  const guestSubmissionId = guest ? result?.submissionId : null
+  const needsGuestLogs = guest && !embeddedPartLogs && Boolean(examId) && Boolean(guestSubmissionId)
+  const [partLogsRetry, setPartLogsRetry] = useState(0)
+  const partLogsKey = !isHomework && needsGuestLogs ? `guest:${examId}:${guestSubmissionId}:${partLogsRetry}`
+    : !isHomework && !guest && !requiresLogin && submissionId ? `student:${submissionId}:${partLogsRetry}` : ''
+  const [partLogsState, setPartLogsState] = useState(null)
+  const [answerReveal, setAnswerReveal] = useState(null)
+  const currentPartLogs = partLogsState?.key === partLogsKey ? partLogsState : null
+  const partTimeLogs = currentPartLogs?.logs || embeddedPartLogs || EMPTY_PART_LOGS
+  const partLogsLoading = Boolean(partLogsKey && !currentPartLogs)
+  const partLogsError = currentPartLogs?.error || ''
+  const orderedPartLogs = useMemo(() => {
+    const indexes = partTimeLogs.map((part) => part.displayIndex)
+    if (!indexes.every(Number.isSafeInteger) || new Set(indexes).size !== indexes.length) return partTimeLogs
+    return [...partTimeLogs].sort((first, second) => first.displayIndex - second.displayIndex)
+  }, [partTimeLogs])
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [])
 
   useEffect(() => {
     if (!examId || guest || requiresLogin) return
@@ -116,15 +187,18 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
   }, [examId, guest, requiresLogin])
 
   useEffect(() => {
-    if (guest || requiresLogin || !submissionId) return
-
-    getSubmissionPartLogs(submissionId)
-      .then(setPartTimeLogs)
+    if (!partLogsKey) return
+    let active = true
+    const request = guest
+      ? getGuestExamPartLogs(examId, guestSubmissionId)
+      : getSubmissionPartLogs(submissionId)
+    request
+      .then((logs) => { if (active) setPartLogsState({ key: partLogsKey, logs, error: '' }) })
       .catch((requestError) => {
-        setPartLogsError(getApiErrorMessage(requestError, 'Không thể tải thời gian làm bài.'))
+        if (active) setPartLogsState({ key: partLogsKey, logs: null, error: getApiErrorMessage(requestError, 'Không thể tải thời gian làm bài.') })
       })
-      .finally(() => setPartLogsLoading(false))
-  }, [guest, requiresLogin, submissionId])
+    return () => { active = false }
+  }, [examId, guest, guestSubmissionId, partLogsKey, submissionId])
 
   const percentage = useMemo(() => {
     if (!Number.isFinite(result?.totalCorrect) || !Number.isFinite(result?.totalQuestions) || result.totalQuestions <= 0) return null
@@ -132,9 +206,23 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
   }, [result])
   const currentAnswerReveal = answerReveal?.examId === examId ? answerReveal : null
   const answersRevealed = guest || currentAnswerReveal?.revealed === true
-  const answerParts = useMemo(() => groupQuestionsByPart(result), [result])
+  const answerParts = useMemo(() => groupQuestionsByPart(result, orderedPartLogs), [result, orderedPartLogs])
+  const answerPartNames = new Map(answerParts.map((part) => [String(part.key), part.name]))
+  const logPartNumbers = new Map(orderedPartLogs.map((part, index) => [String(part.partId), index + 1]))
+  const hasCompleteLogOrder = answerParts.every((group) => logPartNumbers.has(String(group.key)))
+  const answerPartIndexes = answerParts.map((group) =>
+    result?.parts?.find((part) => String(part.partId) === String(group.key))?.displayIndex,
+  )
+  const hasAnswerPartOrder = hasCompleteLogOrder ||
+    (answerPartIndexes.every(Number.isSafeInteger) && new Set(answerPartIndexes).size === answerPartIndexes.length)
+  const resultParts = result?.parts || []
+  const resultPartIndexes = resultParts.map((part) => part.displayIndex)
+  const resultPartNumbers = resultPartIndexes.every(Number.isSafeInteger) && new Set(resultPartIndexes).size === resultPartIndexes.length
+    ? new Map([...resultParts].sort((first, second) => first.displayIndex - second.displayIndex)
+      .map((part, index) => [String(part.partId), index + 1]))
+    : new Map()
+  const waitForAnswerOrder = answerParts.length > 1 && partLogsLoading && !hasAnswerPartOrder
   const isMock = result?.resultMode === 'mock' || String(result?.mode || '').toUpperCase() === 'MOCK'
-  const isHomework = result?.resultMode === 'homework' || location.state?.returnTo === '/video'
   const backTo = returnTo || location.state?.returnTo || (isHomework ? '/video' : isMock ? '/thi-thu' : '/luyen-de')
   const backLabel = returnLabel || (isHomework || location.state?.returnTo ? 'Quay lại video' : isMock ? 'Về danh sách thi thử' : 'Về danh sách luyện đề')
 
@@ -187,28 +275,30 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
         </section>
       )}
 
-      <section className="mt-10">
+      {!isHomework && <section className="mt-10">
         <h2 className="font-gf text-2xl font-bold text-ice-navy">Thời gian theo từng Part</h2>
+        <p className="mt-2 text-sm text-slate-500">Thời gian do hệ thống ghi nhận có thể bao gồm lúc bạn rời hoặc đóng trang.</p>
         {partLogsLoading && <p className="mt-4 text-sm text-slate-500">Đang tải thời gian làm bài...</p>}
         {partLogsError && (
-          <p className="mt-4 rounded-lg bg-red-50 p-4 text-sm text-red-600">{partLogsError}</p>
+          <div className="mt-4 rounded-lg bg-red-50 p-4 text-sm text-red-600" role="alert">
+            <p>{partLogsError}</p>
+            <button className="mt-2 font-semibold underline" onClick={() => setPartLogsRetry((value) => value + 1)} type="button">Thử lại</button>
+          </div>
         )}
         {!partLogsLoading && !partLogsError && partTimeLogs.length === 0 && (
           <p className="mt-4 text-sm text-slate-500">Chưa có dữ liệu thời gian cho bài làm này.</p>
         )}
         <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...partTimeLogs]
-            .sort((first, second) => (first.displayIndex ?? 0) - (second.displayIndex ?? 0))
-            .map((part) => (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" key={part.partId}>
-              <p className="font-bold text-slate-900">{part.partName || 'Part'}</p>
-              <p className="mt-2 text-2xl font-extrabold text-ice-navy">
-                {formatDuration(part.timeSpentSeconds)}
-              </p>
-            </div>
+          {orderedPartLogs.map((part, index) => (
+            <PartTimeCard
+              key={part.partId}
+              part={part}
+              displayNumber={index + 1}
+              name={answerPartNames.get(String(part.partId)) || part.partName}
+            />
           ))}
         </div>
-      </section>
+      </section>}
 
       <section className="mt-10">
         <h2 className="font-gf text-2xl font-bold text-ice-navy">
@@ -227,15 +317,29 @@ export function ExamResultPage({ resultOverride, returnTo, returnLabel }) {
             Không xác định được đề thi nên đáp án được ẩn.
           </p>
         )}
+        {answerParts.length > 1 && !partLogsLoading && !hasAnswerPartOrder && (
+          <p className="mt-3 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+            Không thể xác minh đầy đủ thứ tự Part của lượt làm này.
+          </p>
+        )}
+        {waitForAnswerOrder && <p className="mt-3 text-sm text-slate-500">Đang xác định thứ tự Part của lượt làm...</p>}
         {answerParts.length === 0 && <p className="mt-3 text-sm text-slate-500">Chưa có chi tiết câu trả lời.</p>}
         <div className="mt-4 space-y-8">
-          {answerParts.map((part) => (
+          {!waitForAnswerOrder && answerParts.map((part, index) => (
             <section className="space-y-4" key={part.key}>
-              {part.name && <h3 className="text-lg font-extrabold text-slate-900">{part.name}</h3>}
+              {isHomework
+                ? part.name && <h3 className="text-lg font-extrabold text-slate-900">{part.name}</h3>
+                : part.key !== 'ungrouped' && (
+                  <h3 className="text-lg font-extrabold text-slate-900">
+                    {formatPartName(part.name, (hasCompleteLogOrder ? logPartNumbers.get(String(part.key)) : resultPartNumbers.get(String(part.key))) ?? index + 1)}
+                  </h3>
+                )}
               {part.passageText && <PartPassage part={part} />}
               {part.questions.map((question) => (
                 <QuestionResult
+                  guest={guest}
                   key={question.questionId}
+                  onGuestVideoClick={promptConsultation}
                   question={question}
                   showAnswer={answersRevealed}
                   showVideo={!location.state?.hideVideos && !isHomework}
@@ -263,7 +367,10 @@ function PartPassage({ part }) {
         {part.translate && (
           <div>
             <h4 className="text-sm font-bold text-emerald-700">Bản dịch tiếng Việt</h4>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{part.translate}</p>
+            <div
+              className="mt-2 text-sm leading-7 text-slate-700 [&_h2]:text-center [&_h2]:font-bold [&_p]:mb-3"
+              dangerouslySetInnerHTML={{ __html: textToHtml(part.translate) }}
+            />
           </div>
         )}
       </div>
@@ -273,12 +380,13 @@ function PartPassage({ part }) {
 
 const optionKeys = ['A', 'B', 'C', 'D']
 
-function QuestionResult({ question, showAnswer, showVideo = true }) {
+function QuestionResult({ question, showAnswer, showVideo = true, guest = false, onGuestVideoClick }) {
   const isCorrect = question.isCorrect === true
-  const video = showVideo ? question.relatedVideo || question.related_video : null
-  const videoId = video?.videoId ?? video?.video_id ?? video?.id
-  const videoTitle = video?.videoTitle || video?.video_title || video?.title
-  const hasVideoId = videoId != null && String(videoId).trim() !== ''
+  const legacyVideo = question.relatedVideo || question.related_video
+  const responseVideos = question.relatedVideos || question.related_videos
+  const videos = showVideo
+    ? responseVideos?.length ? responseVideos : legacyVideo ? [legacyVideo] : []
+    : []
 
   return (
     <article className={`rounded-xl border bg-white p-5 shadow-sm ${showAnswer ? (isCorrect ? 'border-emerald-200' : 'border-red-200') : 'border-slate-200'}`}>
@@ -333,21 +441,54 @@ function QuestionResult({ question, showAnswer, showVideo = true }) {
           }}
         />
       )}
-      {video && hasVideoId && (
-        <Link
-          className="mt-4 inline-flex items-center rounded-lg border border-ice-navy/20 bg-ice-navy/5 px-4 py-2 text-sm font-bold text-ice-navy hover:border-ice-navy/40 hover:bg-ice-navy/10"
-          state={{ selectedTitle: videoTitle }}
-          to={`/video?videoId=${encodeURIComponent(videoId)}`}
-        >
-          Xem video ôn tập{videoTitle ? `: ${videoTitle}` : ''}
-        </Link>
-      )}
-      {video && !hasVideoId && (
-        <div className="mt-4 text-sm font-semibold text-amber-800">
-          {videoTitle && <p>Video ôn tập: {videoTitle}</p>}
-          <p>Không thể mở video ôn tập vì dữ liệu chưa có video ID.</p>
-        </div>
-      )}
+      {videos.map((video, index) => {
+        const videoId = video?.videoId ?? video?.video_id ?? video?.id
+        const videoTitle = video?.videoTitle || video?.video_title || video?.title
+        const hasVideoId = videoId != null && String(videoId).trim() !== ''
+        const label = `Xem video ôn tập${videoTitle ? `: ${videoTitle}` : ''}`
+        if (guest) {
+          if (video?.accessible === true && hasVideoId) {
+            return (
+              <Link
+                className="mt-4 mr-2 inline-flex items-center rounded-lg border border-ice-navy/20 bg-ice-navy/5 px-4 py-2 text-sm font-bold text-ice-navy hover:border-ice-navy/40 hover:bg-ice-navy/10"
+                key={videoId}
+                state={{ selectedTitle: videoTitle }}
+                to={`/video?videoId=${encodeURIComponent(videoId)}`}
+              >
+                {label}
+              </Link>
+            )
+          }
+          return (
+            <button
+              className="mt-4 mr-2 inline-flex items-center rounded-lg border border-ice-navy/20 bg-ice-navy/5 px-4 py-2 text-sm font-bold text-ice-navy hover:border-ice-navy/40 hover:bg-ice-navy/10"
+              key={hasVideoId ? videoId : `video-${index}`}
+              onClick={() => onGuestVideoClick?.(videoTitle)}
+              type="button"
+            >
+              {label}
+            </button>
+          )
+        }
+        if (hasVideoId) {
+          return (
+            <Link
+              className="mt-4 mr-2 inline-flex items-center rounded-lg border border-ice-navy/20 bg-ice-navy/5 px-4 py-2 text-sm font-bold text-ice-navy hover:border-ice-navy/40 hover:bg-ice-navy/10"
+              key={videoId}
+              state={{ selectedTitle: videoTitle }}
+              to={`/video?videoId=${encodeURIComponent(videoId)}`}
+            >
+              {label}
+            </Link>
+          )
+        }
+        return (
+          <div className="mt-4 text-sm font-semibold text-amber-800" key={`video-${index}`}>
+            {videoTitle && <p>Video ôn tập: {videoTitle}</p>}
+            <p>Không thể mở video ôn tập vì dữ liệu chưa có video ID.</p>
+          </div>
+        )
+      })}
     </article>
   )
 }

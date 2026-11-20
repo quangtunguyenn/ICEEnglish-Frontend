@@ -1,0 +1,234 @@
+/* ---------- Tokens ---------- */
+.favorite-toast-region {
+  --toast-duration: 2400ms;
+  --toast-in: 380ms;
+  --toast-out: 300ms;
+
+  --toast-surface: rgba(255, 255, 255, 0.84);
+  --toast-border: rgba(16, 43, 92, 0.08);
+  --toast-highlight: rgba(255, 255, 255, 0.9);
+  --toast-text: #102b5c;
+  --toast-muted: #5b6b88;
+  --toast-shadow:
+    0 1px 2px rgba(16, 43, 92, 0.06),
+    0 8px 20px rgba(16, 43, 92, 0.08),
+    0 24px 48px -12px rgba(16, 43, 92, 0.2);
+
+  --toast-ring: #f5b82e;
+  --toast-chip: rgba(245, 184, 46, 0.2);
+  --toast-progress: linear-gradient(90deg, #f5b82e, #ffdc85);
+
+  --toast-enter-x: 14px;
+  --toast-enter-y: -6px;
+
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: 110;
+  display: flex;
+  justify-content: flex-end;
+  max-width: calc(100vw - 2rem);
+  pointer-events: none;
+}
+
+.favorite-toast[data-variant='removed'] {
+  --toast-ring: #8a97b1;
+  --toast-chip: rgba(91, 107, 136, 0.14);
+  --toast-progress: linear-gradient(90deg, #aab5cb, #d3dae8);
+}
+
+@media (prefers-color-scheme: dark) {
+  .favorite-toast-region {
+    --toast-surface: rgba(20, 28, 48, 0.82);
+    --toast-border: rgba(255, 255, 255, 0.09);
+    --toast-highlight: rgba(255, 255, 255, 0.06);
+    --toast-text: #f3f6ff;
+    --toast-muted: #9fb0d0;
+    --toast-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.3),
+      0 10px 24px rgba(0, 0, 0, 0.3),
+      0 28px 56px -12px rgba(0, 0, 0, 0.5);
+    --toast-chip: rgba(245, 184, 46, 0.24);
+  }
+
+  .favorite-toast[data-variant='removed'] {
+    --toast-chip: rgba(159, 176, 208, 0.18);
+  }
+}
+
+/* ---------- Toast ---------- */
+.favorite-toast {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 14rem;
+  max-width: 24rem;
+  overflow: hidden;
+  padding: 0.6rem 1.25rem 0.6rem 0.6rem;
+  border: 1px solid var(--toast-border);
+  border-radius: 1.125rem;
+  background: var(--toast-surface);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+  box-shadow: var(--toast-shadow), inset 0 1px 0 var(--toast-highlight);
+  color: var(--toast-text);
+  will-change: transform, opacity;
+  animation:
+    favorite-toast-in var(--toast-in) cubic-bezier(0.16, 1, 0.3, 1) both,
+    favorite-toast-out var(--toast-out) cubic-bezier(0.4, 0, 1, 1)
+      calc(var(--toast-duration) - var(--toast-out)) forwards;
+}
+
+/* ---------- Icon tile ---------- */
+.favorite-toast__icon {
+  position: relative;
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 2px 6px rgba(16, 43, 92, 0.18);
+}
+
+/* Vòng sóng lan ra một lần khi logo xuất hiện */
+.favorite-toast__icon::after {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--toast-ring);
+  border-radius: inherit;
+  content: '';
+  opacity: 0;
+  animation: favorite-toast-ring 700ms cubic-bezier(0.16, 1, 0.3, 1) 140ms both;
+}
+
+.favorite-toast__logo {
+  width: 1.65rem;
+  height: 1.65rem;
+  object-fit: contain;
+  animation: favorite-toast-pop 560ms cubic-bezier(0.34, 1.56, 0.64, 1) 100ms both;
+}
+
+/* ---------- Text ---------- */
+.favorite-toast__text {
+  min-width: 0;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.006em;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+/* Từ vựng được nhấn bằng chip nhẹ để quét mắt nhanh */
+.favorite-toast__word {
+  padding: 0.05em 0.4em;
+  border-radius: 0.4rem;
+  background: var(--toast-chip);
+  font-weight: 700;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* ---------- Progress ---------- */
+.favorite-toast__progress {
+  position: absolute;
+  right: 1rem;
+  bottom: 0;
+  left: 1rem;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--toast-progress);
+  opacity: 0.9;
+  transform-origin: left;
+  animation: favorite-toast-progress
+    calc(var(--toast-duration) - var(--toast-in) - var(--toast-out)) linear
+    var(--toast-in) both;
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes favorite-toast-in {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--toast-enter-x), var(--toast-enter-y), 0) scale(0.96);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@keyframes favorite-toast-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0) scale(0.98);
+    filter: blur(3px);
+  }
+}
+
+@keyframes favorite-toast-pop {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+@keyframes favorite-toast-ring {
+  0% { opacity: 0.55; transform: scale(0.85); }
+  100% { opacity: 0; transform: scale(1.55); }
+}
+
+@keyframes favorite-toast-progress {
+  to { transform: scaleX(0); }
+}
+
+/* ---------- Mobile: trượt từ trên xuống, căn giữa ---------- */
+@media (max-width: 30rem) {
+  .favorite-toast-region {
+    --toast-enter-x: 0px;
+    --toast-enter-y: -14px;
+    right: max(1rem, env(safe-area-inset-right));
+    left: max(1rem, env(safe-area-inset-left));
+    justify-content: center;
+    max-width: none;
+  }
+
+  .favorite-toast {
+    max-width: 100%;
+  }
+}
+
+/* ---------- Reduced motion: chỉ fade, không chuyển động ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .favorite-toast {
+    will-change: auto;
+    animation:
+      favorite-toast-fade-in 150ms ease-out both,
+      favorite-toast-fade-out 150ms ease-in
+        calc(var(--toast-duration) - 150ms) forwards;
+  }
+
+  .favorite-toast__logo,
+  .favorite-toast__icon::after,
+  .favorite-toast__progress {
+    animation: none;
+  }
+
+  .favorite-toast__icon::after {
+    display: none;
+  }
+
+  @keyframes favorite-toast-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes favorite-toast-fade-out {
+    to { opacity: 0; }
+  }
+}

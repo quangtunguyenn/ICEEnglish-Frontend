@@ -20,7 +20,7 @@ export function ExamQuestion({
       <div className="flex items-start justify-between gap-3">
         <HighlightableContent
           allowHighlight={allowHighlight}
-          className="min-w-0 text-[13px] font-semibold leading-6 text-slate-800"
+          className="min-w-0 text-[14px] font-semibold leading-6 text-slate-800"
           content={questionToHtml(question.displayNumber ?? question.orderIndex, question.content)}
           onContentChange={(content) => onContentChange(content, 'stem')}
           savedContent={highlightedContent?.stem}
@@ -38,7 +38,7 @@ export function ExamQuestion({
       <div className="mt-3 grid gap-2">
         {options.map((option) => (
           <label
-            className={`flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 text-[13px] transition ${
+            className={`flex items-start gap-2 rounded-md px-1 py-1 text-[13px] transition ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} ${
               answer === option
                 ? 'font-semibold text-blue-800'
                 : 'text-slate-600 hover:bg-slate-50'
@@ -56,7 +56,7 @@ export function ExamQuestion({
             />
             <HighlightableContent
               allowHighlight={allowHighlight}
-              className="min-w-0 text-[13px]"
+              className="min-w-0 text-[14px]"
               content={`<p><strong>${option}.</strong> ${formatInlineText(question[`opt${option}`])}</p>`}
               onContentChange={(content) => onContentChange(content, option)}
               savedContent={highlightedContent?.[option]}
